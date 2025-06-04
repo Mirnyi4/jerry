@@ -1,21 +1,22 @@
-import requests
+import speech_recognition as sr
+import pyttsx3
 
-API_KEY = "xai-uT9dB1qXXGWVidc9OpXacnjegjXwVWrjAye5o6M7N82QwW3fQL66YVjDkqMxmhfDgF280V3SKUdiA1AT"
-url = "https://api.x.ai/v1/chat/completions"
+r = sr.Recognizer()
+engine = pyttsx3.init()
 
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {API_KEY}"
-}
+with sr.Microphone() as source:
+    print("🎤 Говорите...")
+    r.adjust_for_ambient_noise(source)
+    audio = r.listen(source)
 
-data = {
-    "messages": [
-        {"role": "user", "content": "Тесла хорошая машина?"}
-    ],
-    "model": "grok-3-latest",
-    "stream": False,
-    "temperature": 0.7
-}
-
-response = requests.post(url, headers=headers, json=data)
-print(response.json()["choices"][0]["message"]["content"])
+try:
+    text = r.recognize_google(audio, language="ru-RU")
+    print("Вы сказали:", text)
+    engine.say(f"Вы сказали: {text}")
+    engine.runAndWait()
+except sr.UnknownValueError:
+    print("🤔 Не распознал речь")
+    engine.say("Я вас не понял")
+    engine.runAndWait()
+except sr.RequestError as e:
+    print(f"Ошибка сервиса: {e}")
