@@ -1,83 +1,63 @@
 import speech_recognition as sr
 from gtts import gTTS
 import os
-import requests
 import time
+from datetime import datetime, timedelta
 
-# 🔑 Твой API-ключ от x.ai (Grok)
-GROK_API_KEY = "xai-uT9dB1qXXGWVidc9OpXacnjegjXwVWrjAye5o6M7N82QwW3fQL66YVjDkqMxmhfDgF280V3SKUdiA1AT"
-GROK_API_URL = "https://x.ai/api/chat"
+WAKE_WORD = "привет"
+RESPONSE_TIMEOUT = 15
 
-# 📦 История диалога (можно доработать, сейчас простая)
-dialogue_history = []
+recognizer = sr.Recognizer()
+mic = sr.Microphone()
 
-# 📢 Функция озвучки
 def speak(text):
-    tts = gTTS(text, lang='ru')
-    filename = f"voice_{int(time.time())}.mp3"
-    tts.save(filename)
-    os.system(f"mpg123 {filename}")
-    os.remove(filename)
+    tts = gTTS(text=text, lang="ru")
+    tts.save("response.mp3")
+    os.system("mpg123 -q response.mp3")
+    os.remove("response.mp3")
 
-# 📥 Функция отправки текста в Grok
-def ask_grok(prompt):
-    headers = {
-        "Authorization": f"Bearer {GROK_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    # Добавляем историю в запрос
-    messages = [{"role": "system", "content": "Ты голосовой помощник по имени Джорджи"}]
-    for item in dialogue_history:
-        messages.append({"role": "user", "content": item["user"]})
-        messages.append({"role": "assistant", "content": item["bot"]})
-
-    messages.append({"role": "user", "content": prompt})
-
-    data = {
-        "messages": messages,
-        "model": "grok-1"
-    }
-
-    response = requests.post(GROK_API_URL, json=data, headers=headers)
-    if response.status_code == 200:
-        reply = response.json().get("message", {}).get("content", "Извини, я не понял.")
-        dialogue_history.append({"user": prompt, "bot": reply})
-        return reply
-    else:
-        return "Произошла ошибка при подключении к Grok."
-
-# 🎤 Слушаем микрофон и обрабатываем команду
-def listen():
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-
+def listen_for_command(timeout=None):
     with mic as source:
-        print("🎧 Слушаю... Скажи 'Привет' для активации")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
-
+        if timeout:
+            audio = recognizer.listen(source, timeout=timeout)
+        else:
+            audio = recognizer.listen(source)
     try:
-        text = recognizer.recognize_google(audio, language="ru-RU").lower()
-        print("📢 Ты сказал:", text)
-        return text
-    except:
+        command = recognizer.recognize_google(audio, language="ru-RU")
+        return command.lower()
+    except sr.UnknownValueError:
+        return ""
+    except sr.RequestError as e:
+        print(f"Ошибка Google API: {e}")
         return ""
 
-# 🧠 Основной цикл
-def main():
-    while True:
-        said = listen()
-        if "Привет" in said:
-            speak("Что?")
-            print("🟢 Активировано")
-            time.sleep(1)
-            command = listen()
-            if command:
-                print("📨 Отправка в Grok:", command)
-                response = ask_grok(command)
-                print("🤖 Джорджи:", response)
-                speak(response)
+print("🎧 Жду слово активации...")
 
-if __name__ == "__main__":
-    main()
+while True:
+    command = listen_for_command()
+    if WAKE_WORD in command:
+        print("🟢 Активирован")
+        speak("Что?")
+        start_time = datetime.now()
+
+        while True:
+            time_passed = datetime.now() - start_time
+            if time_passed > timedelta(seconds=RESPONSE_TIMEOUT):
+                print("⏱ Время ожидания истекло.")
+                break
+
+            try:
+                with mic as source:
+                    print("🎙 Слушаю команду...")
+                    audio = recognizer.listen(source, timeout=RESPONSE_TIMEOUT)
+                message = recognizer.recognize_google(audio, language="ru-RU").lower()
+                print(f"📥 Вы сказали: {message}")
+                speak(f"Ты сказал: {message}")
+                break
+            except sr.WaitTimeoutError:
+                print("⏱ Нет команды в течение 15 секунд.")
+                break
+            except sr.UnknownValueError:
+                print("🙉 Не распознано.")
+                speak("Я не понял.")
+                break
