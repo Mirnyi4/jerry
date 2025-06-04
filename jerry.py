@@ -1,63 +1,73 @@
 import speech_recognition as sr
 from gtts import gTTS
-import os
+from pydub import AudioSegment
+from pydub.playback import play
+import io
+import requests
 import time
-from datetime import datetime, timedelta
 
-WAKE_WORD = "привет"
-RESPONSE_TIMEOUT = 15
+GROK_API_KEY = "xai-uT9dB1qXXGWVidc9OpXacnjegjXwVWrjAye5o6M7N82QwW3fQL66YVjDkqMxmhfDgF280V3SKUdiA1AT"
 
 recognizer = sr.Recognizer()
 mic = sr.Microphone()
 
 def speak(text):
-    tts = gTTS(text=text, lang="ru")
-    tts.save("response.mp3")
-    os.system("mpg123 -q response.mp3")
-    os.remove("response.mp3")
+    tts = gTTS(text=text, lang='ru')
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    audio = AudioSegment.from_file(fp, format="mp3")
+    play(audio)
 
-def listen_for_command(timeout=None):
+def ask_grok(question):
+    url = "https://x.ai/api/chat"
+    headers = {
+        "Authorization": f"Bearer {GROK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messages": [{"role": "user", "content": question}],
+        "model": "grok-1"
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.ok:
+        return response.json()['choices'][0]['message']['content']
+    else:
+        return "Извините, я не смог получить ответ."
+
+def listen_for_keyword(keyword="привет"):
+    print("🎧 В режиме ожидания. Скажите 'Привет'")
     with mic as source:
-        if timeout:
-            audio = recognizer.listen(source, timeout=timeout)
-        else:
-            audio = recognizer.listen(source)
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source, phrase_time_limit=4)
     try:
-        command = recognizer.recognize_google(audio, language="ru-RU")
-        return command.lower()
-    except sr.UnknownValueError:
-        return ""
-    except sr.RequestError as e:
-        print(f"Ошибка Google API: {e}")
-        return ""
+        text = recognizer.recognize_google(audio, language="ru-RU").lower()
+        return keyword in text
+    except:
+        return False
 
-print("🎧 Жду слово активации...")
+def listen_command(timeout=15):
+    print("🎤 Ожидаю команду 15 секунд...")
+    with mic as source:
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=timeout)
+    try:
+        return recognizer.recognize_google(audio, language="ru-RU")
+    except:
+        return None
 
 while True:
-    command = listen_for_command()
-    if WAKE_WORD in command:
-        print("🟢 Активирован")
-        speak("Что?")
-        start_time = datetime.now()
-
-        while True:
-            time_passed = datetime.now() - start_time
-            if time_passed > timedelta(seconds=RESPONSE_TIMEOUT):
-                print("⏱ Время ожидания истекло.")
-                break
-
-            try:
-                with mic as source:
-                    print("🎙 Слушаю команду...")
-                    audio = recognizer.listen(source, timeout=RESPONSE_TIMEOUT)
-                message = recognizer.recognize_google(audio, language="ru-RU").lower()
-                print(f"📥 Вы сказали: {message}")
-                speak(f"Ты сказал: {message}")
-                break
-            except sr.WaitTimeoutError:
-                print("⏱ Нет команды в течение 15 секунд.")
-                break
-            except sr.UnknownValueError:
-                print("🙉 Не распознано.")
-                speak("Я не понял.")
-                break
+    if listen_for_keyword("привет"):
+        print("✅ Ключевое слово обнаружено!")
+        speak("Слушаю")
+        try:
+            command = listen_command(timeout=15)
+            if command:
+                print(f"📥 Команда: {command}")
+                response = ask_grok(command)
+                print(f"🤖 Ответ: {response}")
+                speak(response)
+            else:
+                print("⏱ Время ожидания истекло")
+        except sr.WaitTimeoutError:
+            print("⏳ Никто не говорил. Возврат в ожидание.")
