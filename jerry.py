@@ -53,7 +53,7 @@ def listen():
     mic = sr.Microphone()
 
     with mic as source:
-        print("🎧 Слушаю... Скажи 'Джорджи' для активации")
+        print("🎧 Слушаю... Скажи 'Привет' для активации")
         recognizer.adjust_for_ambient_noise(source)
         audio = recognizer.listen(source)
 
@@ -68,7 +68,7 @@ def listen():
 def main():
     while True:
         said = listen()
-        if "джорджи" in said:
+        if "Привет" in said:
             speak("Что?")
             print("🟢 Активировано")
             time.sleep(1)
