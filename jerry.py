@@ -10,7 +10,7 @@ headers = {
 
 data = {
     "messages": [
-        {"role": "user", "content": "Привет, что ты умеешь делать?"}
+        {"role": "user", "content": "Тесла хорошая машина?"}
     ],
     "model": "grok-3-latest",
     "stream": False,
