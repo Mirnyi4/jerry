@@ -2,7 +2,6 @@ import speech_recognition as sr
 import time
 import requests
 import os
-import openai
 from elevenlabs import generate, play, set_api_key
 from pydub import AudioSegment
 from pydub.playback import play as play_audio
