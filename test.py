@@ -9,17 +9,19 @@ def say(text):
     client = ElevenLabs(api_key=API_KEY)
     voices = client.voices.get_all()
 
-    print("voices:", voices)  # Посмотри структуру
+    print("voices:", voices)  # Смотрим структуру — это список объектов Voice
 
-    # Если голос — кортеж, где имя на позиции 1
-    print("Доступные голоса:", [v[1] for v in voices])
+    # Выведем имена голосов
+    print("Доступные голоса:", [v.name for v in voices])
 
-    # Выбираем голос по имени, например "Rachel"
-    voice = next((v for v in voices if v[1] == "Rachel"), None)
+    # Ищем голос по имени, например "Rachel" или "Lily"
+    voice = next((v for v in voices if v.name == "Rachel"), None)
+    if voice is None:
+        voice = next((v for v in voices if v.name == "Lily"), None)
     if voice is None:
         voice = voices[0]
 
-    audio_stream = client.text_to_speech.speech(text=text, voice_id=voice[0])  # id в позиции 0
+    audio_stream = client.text_to_speech.speech(text=text, voice_id=voice.voice_id)
 
     with open("output.mp3", "wb") as f:
         for chunk in audio_stream:
