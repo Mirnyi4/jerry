@@ -1,38 +1,37 @@
 import speech_recognition as sr
 import time
-import threading
-import queue
 import json
-from elevenlabs import ElevenLabs, VoiceSettings
 import requests
+from elevenlabs import ElevenLabs, Voice, VoiceSettings, play
 
 # === НАСТРОЙКИ === #
 WAKE_WORD = "привет"
 API_GROK_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0AnXWro4BOB9V3dulo7OcUr"
 ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Можно заменить на другой голос
+ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Можно заменить
 
 # === Состояние === #
 chat_history = [
     {"role": "system", "content": "Ты голосовой ассистент Джерри. Общайся как быдло, кратко, с черным юмором и шути. Не извиняйся. Отвечай как человек с характером."}
 ]
-is_listening = True
 last_input_time = time.time()
 
-# === Инициализация ElevenLabs === #
-from elevenlabs import generate, play
+# === Инициализация ElevenLabs клиента === #
+client = ElevenLabs(api_key=ELEVEN_API_KEY)
 
+# === Воспроизведение текста голосом === #
 def say(text):
-    audio = generate(
+    audio = client.generate(
         text=text,
-        voice=ELEVEN_VOICE_ID,
-        model="eleven_multilingual_v2",
-        api_key=ELEVEN_API_KEY,
-        voice_settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
+        voice=Voice(
+            voice_id=ELEVEN_VOICE_ID,
+            settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
+        ),
+        model="eleven_multilingual_v2"
     )
     play(audio)
 
-# === Отправка сообщения в Grok (X.AI) === #
+# === Отправка сообщения в Grok === #
 def send_to_grok(messages):
     url = "https://api.x.ai/v1/chat/completions"
     headers = {
@@ -50,7 +49,7 @@ def send_to_grok(messages):
     else:
         return "Извини, с серверами Grok что-то не так."
 
-# === Функция распознавания речи === #
+# === Распознавание речи === #
 def recognize_speech(recognizer, mic):
     with mic as source:
         print("🎧 Слушаю...")
@@ -65,7 +64,7 @@ def recognize_speech(recognizer, mic):
     except sr.RequestError:
         return "Ошибка подключения"
 
-# === Главная логика === #
+# === Главный цикл === #
 def assistant_loop():
     global chat_history, last_input_time
     recognizer = sr.Recognizer()
@@ -86,9 +85,8 @@ def assistant_loop():
 
                 last_input_time = time.time()
 
-                # Проверка на очистку памяти
                 if "очисти память" in user_text:
-                    chat_history = chat_history[:1]  # Сбросить до системного промта
+                    chat_history = chat_history[:1]
                     say("Очистила всё к чертям")
                     continue
 
