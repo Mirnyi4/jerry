@@ -1,12 +1,13 @@
 import subprocess
-from elevenlabs import ElevenLabs
+from elevenlabs import ElevenLabs, VoiceClient
 
 API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
 
 client = ElevenLabs(api_key=API_KEY)
+voice_client = VoiceClient(client)
 
 def say(text, voice_name="Bella"):
-    voices = client.get_voices()
+    voices = voice_client.list_voices()
     voice = None
     for v in voices:
         if v.name == voice_name:
