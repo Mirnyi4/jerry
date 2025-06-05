@@ -1,7 +1,7 @@
 from elevenlabs import ElevenLabs
 import subprocess
 
-API_KEY = "твой_ключ_сюда"
+API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
 
 def say(text):
     client = ElevenLabs(api_key=API_KEY)
