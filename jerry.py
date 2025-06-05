@@ -2,13 +2,14 @@ import speech_recognition as sr
 import time
 import json
 import requests
-from elevenlabs import generate, play, Voice, VoiceSettings, set_api_key
+from elevenlabs.client import ElevenLabs
+from elevenlabs import play, Voice, VoiceSettings
 
 # === НАСТРОЙКИ === #
 WAKE_WORD = "привет"
 API_GROK_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0AnXWro4BOB9V3dulo7OcUr"
 ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # можно заменить
+ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"
 
 # === Состояние === #
 chat_history = [
@@ -16,12 +17,12 @@ chat_history = [
 ]
 last_input_time = time.time()
 
-# === Установка ключа API === #
-set_api_key(ELEVEN_API_KEY)
+# === Клиент ElevenLabs === #
+client = ElevenLabs(api_key=ELEVEN_API_KEY)
 
 # === Воспроизведение текста голосом === #
 def say(text):
-    audio = generate(
+    audio = client.generate(
         text=text,
         voice=Voice(
             voice_id=ELEVEN_VOICE_ID,
