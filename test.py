@@ -1,30 +1,26 @@
+from elevenlabs import ElevenLabs
 import subprocess
-from elevenlabs import ElevenLabs, VoiceClient
 
-API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+API_KEY = "твой_ключ_сюда"
 
-client = ElevenLabs(api_key=API_KEY)
-voice_client = VoiceClient(client)
+def say(text):
+    client = ElevenLabs(api_key=API_KEY)
+    voices = client.voices.list()
+    print("Доступные голоса:", [v.name for v in voices])
 
-def say(text, voice_name="Bella"):
-    voices = voice_client.list_voices()
-    voice = None
-    for v in voices:
-        if v.name == voice_name:
-            voice = v
-            break
-    if not voice:
-        print(f"Голос с именем '{voice_name}' не найден, использую первый доступный.")
-        voice = voices[0]
+    # Попытаемся взять голос "Rachel", если есть
+    voice = next((v for v in voices if v.name == "Rachel"), None)
+    if voice is None:
+        voice = voices[0]  # если нет Rachel, берём первый доступный голос
 
-    audio_gen = client.text_to_speech.convert(text=text, voice=voice)
-    audio_bytes = b"".join(chunk for chunk in audio_gen)
+    audio_stream = client.text_to_speech.speech(text=text, voice_id=voice.id)
 
-    filename = "output.mp3"
-    with open(filename, "wb") as f:
-        f.write(audio_bytes)
+    with open("output.mp3", "wb") as f:
+        for chunk in audio_stream:
+            f.write(chunk)
 
-    subprocess.run(["mpg123", "-a", "plughw:0,0", filename])
+    # Проигрываем через aplay на нужном устройстве
+    subprocess.run(["aplay", "-D", "plughw:0,0", "output.mp3"])
 
 if __name__ == "__main__":
-    say("Привет, это тест звука через ElevenLabs и mpg123 на устройстве USB PnP Sound Device.")
+    say("Привет, это тест ElevenLabs и воспроизведение через aplay на USB PnP Sound Device")
