@@ -22,7 +22,8 @@ client = ElevenLabs(api_key=ELEVEN_API_KEY)
 
 # === Воспроизведение текста голосом === #
 def say(text):
-    audio = client.generate(
+    audio = generate(
+        api_key=ELEVEN_API_KEY,
         text=text,
         voice=Voice(
             voice_id=ELEVEN_VOICE_ID,
