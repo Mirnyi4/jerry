@@ -1,30 +1,25 @@
-import asyncio
-import simpleaudio as sa
 from elevenlabs.client import ElevenLabs
+import simpleaudio as sa
 
-api_key = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-client = ElevenLabs(api_key=api_key)
+client = ElevenLabs(
+    api_key="sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+)
 
-async def main():
-    audio_stream = await client.text_to_speech.convert(
-        text="Ну что, поехали, мать его!",
-        voice_id="EXAVITQu4vr4xnSDxMaL",
-        model_id="eleven_multilingual_v2",
-        output_format="pcm_44100"
-    )
+audio_stream = client.text_to_speech.convert(
+    text="Ну что, поехали, мать его!",
+    voice_id="EXAVITQu4vr4xnSDxMaL",
+    model_id="eleven_multilingual_v2",
+    output_format="pcm_44100"
+)
 
-    # Собираем аудиоданные из асинхронного генератора
-    audio_bytes = b""
-    async for chunk in audio_stream:
-        audio_bytes += chunk
+# Собираем поток в байты
+audio_bytes = b"".join(chunk for chunk in audio_stream)
 
-    # Сохраняем в WAV
-    with open("output.wav", "wb") as f:
-        f.write(audio_bytes)
+# Сохраняем в файл
+with open("output.wav", "wb") as f:
+    f.write(audio_bytes)
 
-    # Воспроизводим
-    wave_obj = sa.WaveObject.from_wave_file("output.wav")
-    play_obj = wave_obj.play()
-    play_obj.wait_done()
-
-asyncio.run(main())
+# Воспроизведение
+wave_obj = sa.WaveObject.from_wave_file("output.wav")
+play_obj = wave_obj.play()
+play_obj.wait_done()
