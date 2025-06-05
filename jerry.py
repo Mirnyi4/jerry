@@ -69,7 +69,7 @@ def recognize_speech(recognizer, mic):
 def assistant_loop():
     global chat_history, last_input_time
     recognizer = sr.Recognizer()
-    mic = sr.Microphone(device_index=0)
+    mic = sr.Microphone
 
     while True:
         text = recognize_speech(recognizer, mic)
