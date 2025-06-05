@@ -1,24 +1,21 @@
-from elevenlabs.client import ElevenLabs
-import simpleaudio as sa
-import tempfile
-
-client = ElevenLabs(
-    api_key="sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-)
-
-audio_stream = client.text_to_speech.convert(
-    text="Ну что, поехали, мать его!",
-    voice_id="EXAVITQu4vr4xnSDxMaL",
-    model_id="eleven_multilingual_v2",
-    output_format="mp3_44100_128"
-)
-
-# Сохраняем во временный MP3-файл
-with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-    for chunk in audio_stream:
-        f.write(chunk)
-    mp3_path = f.name
-
-# Проигрываем с помощью mpg123 (если установлен)
 import subprocess
-subprocess.run(["mpg123", mp3_path])
+from elevenlabs import ElevenLabs
+
+API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+
+client = ElevenLabs(api_key=API_KEY)
+
+def say(text, voice_name="Bella"):
+    voice = client.get_voices_by_name(voice_name)[0]
+
+    audio_gen = client.text_to_speech.convert(text=text, voice=voice)
+    audio_bytes = b"".join(chunk for chunk in audio_gen)
+
+    filename = "output.mp3"
+    with open(filename, "wb") as f:
+        f.write(audio_bytes)
+
+    subprocess.run(["mpg123", "-a", "plughw:0,0", filename])
+
+if __name__ == "__main__":
+    say("Привет, это тест звука через ElevenLabs и mpg123 на устройстве USB PnP Sound Device.")
