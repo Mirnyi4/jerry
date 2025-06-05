@@ -20,17 +20,17 @@ is_listening = True
 last_input_time = time.time()
 
 # === Инициализация ElevenLabs === #
-tts = ElevenLabs(api_key=ELEVEN_API_KEY)
+from elevenlabs import generate, play
 
-# === Функция воспроизведения текста голосом === #
 def say(text):
-    audio = tts.generate(
+    audio = generate(
         text=text,
         voice=ELEVEN_VOICE_ID,
         model="eleven_multilingual_v2",
+        api_key=ELEVEN_API_KEY,
         voice_settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
     )
-    tts.play(audio)
+    play(audio)
 
 # === Отправка сообщения в Grok (X.AI) === #
 def send_to_grok(messages):
