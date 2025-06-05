@@ -1,116 +1,105 @@
 import speech_recognition as sr
 import time
+import threading
+import queue
+import json
+from elevenlabs import ElevenLabs, VoiceSettings
 import requests
-import os
-from elevenlabs import generate, play, set_api_key
-from pydub import AudioSegment
-from pydub.playback import play as play_audio
-from io import BytesIO
 
-# === Настройки API ===
-GROK_API_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0AnXWro4BOB9V3dulo7OcUr"
+# === НАСТРОЙКИ === #
+WAKE_WORD = "привет"
+API_GROK_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0AnXWro4BOB9V3dulo7OcUr"
 ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Можно заменить на другой голос
 
-# === Инициализация ===
-set_api_key(ELEVEN_API_KEY)
-recognizer = sr.Recognizer()
-microphone = sr.Microphone()
-conversation_history = []
-ASSISTANT_NAME = "Джерри"
-ACTIVE = False
-last_interaction_time = 0
-TIMEOUT = 15
+# === Состояние === #
+chat_history = [
+    {"role": "system", "content": "Ты голосовой ассистент Джерри. Общайся как быдло, кратко, с черным юмором и шути. Не извиняйся. Отвечай как человек с характером."}
+]
+is_listening = True
+last_input_time = time.time()
 
-# === Grok ===
-def ask_grok(prompt):
+# === Инициализация ElevenLabs === #
+tts = ElevenLabs(api_key=ELEVEN_API_KEY)
+
+# === Функция воспроизведения текста голосом === #
+def say(text):
+    audio = tts.generate(
+        text=text,
+        voice=ELEVEN_VOICE_ID,
+        model="eleven_multilingual_v2",
+        voice_settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
+    )
+    tts.play(audio)
+
+# === Отправка сообщения в Grok (X.AI) === #
+def send_to_grok(messages):
+    url = "https://api.x.ai/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {GROK_API_KEY}"
+        "Authorization": f"Bearer {API_GROK_KEY}"
     }
     data = {
-        "messages": [{"role": "system", "content": "Ты помощник Джерри. Общайся как быдло, кратко, с юмором, иногда с чёрным юмором. Не будь вежливым."}] + conversation_history + [{"role": "user", "content": prompt}],
-        "model": "grok-3-latest",
-        "stream": False,
-        "temperature": 0.7
+        "messages": messages,
+        "model": "grok-1",
+        "temperature": 0.5
     }
+    response = requests.post(url, headers=headers, json=data)
+    if response.ok:
+        return response.json()["choices"][0]["message"]["content"]
+    else:
+        return "Извини, с серверами Grok что-то не так."
+
+# === Функция распознавания речи === #
+def recognize_speech(recognizer, mic):
+    with mic as source:
+        print("🎧 Слушаю...")
+        audio = recognizer.listen(source, timeout=15, phrase_time_limit=10)
     try:
-        response = requests.post("https://api.x.ai/v1/chat/completions", headers=headers, json=data)
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-    except Exception as e:
-        print("❌ Ошибка Grok:", e)
-        return "Что-то с мозгами... Попробуй ещё раз."
+        text = recognizer.recognize_google(audio, language="ru-RU").lower()
+        print(f"🗣 Ты сказал: {text}")
+        return text
+    except sr.UnknownValueError:
+        print("🤖 Не понял")
+        return ""
+    except sr.RequestError:
+        return "Ошибка подключения"
 
-# === Голосовой ответ ===
-def speak(text):
-    try:
-        audio = generate(
-            text=text,
-            voice="Antoni",  # Можно заменить на другой голос
-            model="eleven_monolingual_v1"
-        )
-        play(audio)
-    except Exception as e:
-        print("❌ Ошибка озвучки:", e)
-
-# === Распознавание речи ===
-def listen():
-    with microphone as source:
-        recognizer.adjust_for_ambient_noise(source)
-        try:
-            print("🎤 Слушаю...")
-            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
-            text = recognizer.recognize_google(audio, language="ru-RU")
-            print("🗣 Вы сказали:", text)
-            return text.lower()
-        except sr.WaitTimeoutError:
-            return None
-        except sr.UnknownValueError:
-            return None
-        except sr.RequestError as e:
-            print("❌ Ошибка подключения к Google Speech:", e)
-            return None
-
-# === Основной цикл ===
-def main():
-    global ACTIVE, last_interaction_time, conversation_history
-
-    print(f"🤖 Джерри в режиме ожидания. Скажи 'Привет'...")
+# === Главная логика === #
+def assistant_loop():
+    global chat_history, last_input_time
+    recognizer = sr.Recognizer()
+    mic = sr.Microphone()
 
     while True:
-        if not ACTIVE:
-            text = listen()
-            if text and "привет" in text:
-                ACTIVE = True
-                last_interaction_time = time.time()
-                speak("Слушаю")
-                continue
-        else:
-            # В активном режиме
-            text = listen()
-            now = time.time()
-
-            if text:
-                last_interaction_time = now
-
-                if "очисти память" in text:
-                    conversation_history = []
-                    speak("Окей, всё забыто.")
+        text = recognize_speech(recognizer, mic)
+        if WAKE_WORD in text:
+            say("Слушаю")
+            last_input_time = time.time()
+            while True:
+                user_text = recognize_speech(recognizer, mic)
+                if not user_text:
+                    if time.time() - last_input_time > 15:
+                        say("Поняла, ухожу в режим ожидания.")
+                        break
                     continue
 
-                conversation_history.append({"role": "user", "content": text})
-                response = ask_grok(text)
-                conversation_history.append({"role": "assistant", "content": response})
-                print("🤖", response)
-                speak(response)
+                last_input_time = time.time()
 
-            elif now - last_interaction_time > TIMEOUT:
-                speak("Поняла, ухожу в режим ожидания")
-                ACTIVE = False
-                conversation_history = []
-                print("🕓 Джерри вернулся в режим ожидания.")
+                # Проверка на очистку памяти
+                if "очисти память" in user_text:
+                    chat_history = chat_history[:1]  # Сбросить до системного промта
+                    say("Очистила всё к чертям")
+                    continue
 
-# === Запуск ===
+                chat_history.append({"role": "user", "content": user_text})
+                bot_reply = send_to_grok(chat_history)
+                chat_history.append({"role": "assistant", "content": bot_reply})
+                say(bot_reply)
+
+# === Запуск === #
 if __name__ == "__main__":
-    main()
+    try:
+        assistant_loop()
+    except KeyboardInterrupt:
+        print("Выключаюсь...")
