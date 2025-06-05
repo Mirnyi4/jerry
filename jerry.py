@@ -1,9 +1,7 @@
 import speech_recognition as sr
 import time
-import json
 import requests
-from elevenlabs.client import ElevenLabs
-from elevenlabs import play, Voice, VoiceSettings
+from elevenlabs import generate, play, Voice, VoiceSettings
 
 # === НАСТРОЙКИ === #
 WAKE_WORD = "привет"
@@ -11,16 +9,12 @@ API_GROK_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0An
 ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
 ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"
 
-# === Состояние === #
+# === ПАМЯТЬ === #
 chat_history = [
     {"role": "system", "content": "Ты голосовой ассистент Джерри. Общайся как быдло, кратко, с черным юмором и шути. Не извиняйся. Отвечай как человек с характером."}
 ]
-last_input_time = time.time()
 
-# === Клиент ElevenLabs === #
-client = ElevenLabs(api_key=ELEVEN_API_KEY)
-
-# === Воспроизведение текста голосом === #
+# === ПРОИЗНЕСЕНИЕ === #
 def say(text):
     audio = generate(
         api_key=ELEVEN_API_KEY,
@@ -33,7 +27,7 @@ def say(text):
     )
     play(audio)
 
-# === Отправка сообщения в Grok === #
+# === ЗАПРОС К GROK === #
 def send_to_grok(messages):
     url = "https://api.x.ai/v1/chat/completions"
     headers = {
@@ -49,9 +43,9 @@ def send_to_grok(messages):
     if response.ok:
         return response.json()["choices"][0]["message"]["content"]
     else:
-        return "Извини, с серверами Grok что-то не так."
+        return "Что-то с Grok не так. Гори оно огнем."
 
-# === Распознавание речи === #
+# === РАСПОЗНАВАНИЕ РЕЧИ === #
 def recognize_speech(recognizer, mic):
     with mic as source:
         print("🎧 Слушаю...")
@@ -66,11 +60,12 @@ def recognize_speech(recognizer, mic):
     except sr.RequestError:
         return "Ошибка подключения"
 
-# === Главный цикл === #
+# === ОСНОВНОЙ ЦИКЛ === #
 def assistant_loop():
-    global chat_history, last_input_time
+    global chat_history
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
+    last_input_time = time.time()
 
     while True:
         text = recognize_speech(recognizer, mic)
@@ -97,7 +92,7 @@ def assistant_loop():
                 chat_history.append({"role": "assistant", "content": bot_reply})
                 say(bot_reply)
 
-# === Запуск === #
+# === ЗАПУСК === #
 if __name__ == "__main__":
     try:
         assistant_loop()
