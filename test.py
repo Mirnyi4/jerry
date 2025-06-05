@@ -1,3 +1,4 @@
+print("Запуск скрипта")
 def say(text):
     client = ElevenLabs(api_key=API_KEY)
     voices = client.voices.get_all()
