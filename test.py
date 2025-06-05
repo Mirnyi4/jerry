@@ -20,3 +20,4 @@ def say(text):
             f.write(chunk)
 
     subprocess.run(["aplay", "-D", "plughw:0,0", "output.mp3"])
+print("Конец скрипта")
