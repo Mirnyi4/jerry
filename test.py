@@ -1,4 +1,10 @@
+import subprocess
+from elevenlabs import ElevenLabs
+
+API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+
 print("Запуск скрипта")
+
 def say(text):
     client = ElevenLabs(api_key=API_KEY)
     voices = client.voices.get_all()
@@ -20,4 +26,7 @@ def say(text):
             f.write(chunk)
 
     subprocess.run(["aplay", "-D", "plughw:0,0", "output.mp3"])
+
+say("Привет, это тест ElevenLabs и воспроизведение через aplay на USB PnP Sound Device")
+
 print("Конец скрипта")
