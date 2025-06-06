@@ -2,14 +2,21 @@ import os
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
+
+# Загружаем переменные окружения из файла .env
 load_dotenv()
+
+# Получаем API-ключ из переменной окружения
 elevenlabs = ElevenLabs(
-  api_key=os.getenv("sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"),
+    api_key=os.getenv("ELEVENLABS_API_KEY")
 )
+
+# Генерация и воспроизведение речи
 audio = elevenlabs.text_to_speech.convert(
-    text="Привет, проверяем мою работу, йоу",
-    voice_id="JBFqnCBsd6RMkjVDRZzb",
+    text="Привет, я Джерри. Сейчас проверяю работу голоса.",
+    voice_id="JBFqnCBsd6RMkjVDRZzb",  # Здесь твой нужный голос
     model_id="eleven_multilingual_v2",
-    output_format="mp3_44100_128",
+    output_format="mp3_44100_128"
 )
+
 play(audio)
