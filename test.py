@@ -3,20 +3,32 @@ from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
 
-# Загружаем переменные окружения из файла .env
+# Загружаем .env
 load_dotenv()
 
-# Получаем API-ключ из переменной окружения
-elevenlabs = ElevenLabs(
-    api_key=os.getenv("ELEVENLABS_API_KEY")
-)
+# Проверяем API ключ
+api_key = os.getenv("ELEVENLABS_API_KEY")
+if not api_key:
+    print("❌ API ключ не найден! Проверь .env файл.")
+    exit(1)
 
-# Генерация и воспроизведение речи
-audio = elevenlabs.text_to_speech.convert(
-    text="Привет, я Джерри. Сейчас проверяю работу голоса.",
-    voice_id="JBFqnCBsd6RMkjVDRZzb",  # Здесь твой нужный голос
-    model_id="eleven_multilingual_v2",
-    output_format="mp3_44100_128"
-)
+print("✅ API ключ загружен.")
 
-play(audio)
+try:
+    elevenlabs = ElevenLabs(api_key=api_key)
+
+    print("🛠 Генерация аудио...")
+    audio = elevenlabs.text_to_speech.convert(
+        text="Привет! Джерри снова в деле.",
+        voice_id="JBFqnCBsd6RMkjVDRZzb",
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128"
+    )
+
+    print("🔊 Воспроизведение...")
+    play(audio)
+    print("✅ Готово.")
+
+except Exception as e:
+    print("❗Произошла ошибка:")
+    print(e)
