@@ -89,13 +89,15 @@ def clear_memory():
 
 # ==== 🌀 Главный цикл ====
 def main():
+   speak("Джерри слушает... Скажи 'Привет' для активации.ю")
     print("🎤 Джерри слушает... Скажи 'Привет' для активации.")
     load_memory()
 
     while True:
         record_audio("input.wav", duration=2)
-        text = speech_to_text("input.wav")
-        if "привет" in text:
+            text = speech_to_text("input.wav")
+             print(f"[Распознано в ожидании]: {text}")  # <— Вставка
+             if "привет" in text:
             speak("Слушаю")
             while True:
                 record_audio("command.wav", duration=10)
