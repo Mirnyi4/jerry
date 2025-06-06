@@ -32,16 +32,31 @@ def record_audio(filename, duration=5):
     subprocess.run(["arecord", "-D", "plughw:0,0", "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# ==== 🧠 Распознавание речи ====
+# ==== 🧠 Распознавание речи через ElevenLabs STT ====
 def speech_to_text(filename):
     with open(filename, "rb") as f:
-        response = requests.post(
-            "https://api.openai.com/v1/audio/transcriptions",
-            headers={"Authorization": f"Bearer {ELEVEN_API_KEY}"},
-            files={"file": f},
-            data={"model": "whisper-1"}
-        )
-    return response.json().get("text", "").lower()
+        audio_data = f.read()
+    url = "https://api.elevenlabs.io/v1/speech-to-text"
+    headers = {
+        "xi-api-key": ELEVEN_API_KEY,
+    }
+    files = {
+        "file": ("audio.wav", audio_data, "audio/wav")
+    }
+    params = {
+        "model_id": "scribe_v1",
+        "language_code": "ru",  # язык распознавания, поменяй если нужно
+        "diarize": False,
+        "tag_audio_events": False
+    }
+    response = requests.post(url, headers=headers, files=files, data=params)
+    if response.status_code == 200:
+        result = response.json()
+        text = result.get("transcription", "").lower()
+        return text
+    else:
+        print(f"[Ошибка распознавания]: {response.status_code} {response.text}")
+        return ""
 
 # ==== 🤖 Запрос к Grok ====
 def ask_grok(prompt):
@@ -95,14 +110,13 @@ def main():
     while True:
         record_audio("input.wav", duration=2)
         text = speech_to_text("input.wav")
-        print(f"[Распознано в ожидании]: {text}")  # <— Вставка
+        print(f"[Распознано в ожидании]: {text}")
         if "привет" in text:
             speak("Слушаю")
             while True:
                 record_audio("command.wav", duration=10)
                 command = speech_to_text("command.wav")
                 print(f"🗣 Ты сказал: {command}")
-
 
                 if not command.strip():
                     speak("Поняла, ухожу в режим ожидания.")
