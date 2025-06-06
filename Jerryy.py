@@ -86,7 +86,7 @@ def clear_memory():
     global history
     history = [{"role": "system", "content": "Ты голосовой помощник по имени Джерри. Отвечай просто, с юмором."}]
     save_memory()
-
+    
 # ==== 🌀 Главный цикл ====
 def main():
     print("🎤 Джерри слушает... Скажи 'Привет' для активации.")
@@ -94,14 +94,15 @@ def main():
 
     while True:
         record_audio("input.wav", duration=2)
-            text = speech_to_text("input.wav")
-             print(f"[Распознано в ожидании]: {text}")  # <— Вставка
-             if "привет" in text:
+        text = speech_to_text("input.wav")
+        print(f"[Распознано в ожидании]: {text}")  # <— Вставка
+        if "привет" in text:
             speak("Слушаю")
             while True:
                 record_audio("command.wav", duration=10)
                 command = speech_to_text("command.wav")
                 print(f"🗣 Ты сказал: {command}")
+
 
                 if not command.strip():
                     speak("Поняла, ухожу в режим ожидания.")
