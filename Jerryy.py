@@ -1,156 +1,142 @@
-
-from datetime import datetime, timedelta
 import os
 import time
-import threading
 import json
+import subprocess
 import requests
-import sounddevice as sd
-import soundfile as sf
-import queue
-import signal
+from datetime import datetime
 
-# Параметры
-NAME = "Джерри"
-WAKE_WORD = "привет"
-GOODBYE = "Поняла, ухожу в режим ожидания."
-LISTEN_TIMEOUT = 15  # секунд
-HISTORY_FILE = "memory.json"
-PASSWORD = "1234"  # для очистки памяти
-DEVICE = "plughw:0,0"
-TTS_FILE = "output.wav"
-XI_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+# ==== 🔑 Ключи ====
 GROK_API_KEY = "xai-E9xNjvychdMfLI0IUDpJ9T5kHAFh0xFDYcVxPtdwCYyBb7ynVABZQuSyPkx5NFSMFTga9bgyqTsXkBWU"
+ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Живой, нейтральный голос
+PASSWORD = "1234"  # Пароль для очистки памяти
 
-q = queue.Queue()
+# ==== ⚙️ Переменные ====
+history = [{"role": "system", "content": "Ты голосовой помощник по имени Джерри. Отвечай просто, с юмором, можно с чёрным."}]
+JERRY_NAME = "джерри"
+MEMORY_FILE = "jerry_memory.json"
 
-# Инициализация памяти
-if not os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump([], f)
+# ==== 🧠 Загрузка/сохранение памяти ====
+def save_memory():
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(history, f)
 
-# ---------- Звукозапись ----------
-def record_audio(timeout=5):
-    samplerate = 16000
-    duration = timeout
-    filename = "recorded.wav"
+def load_memory():
+    global history
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r") as f:
+            history = json.load(f)
 
-    def callback(indata, frames, time, status):
-        q.put(indata.copy())
+# ==== 🎤 Запись речи ====
+def record_audio(filename, duration=5):
+    subprocess.run(["arecord", "-D", "plughw:0,0", "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    q.queue.clear()
-    with sf.SoundFile(filename, mode='w', samplerate=samplerate, channels=1) as file:
-        with sd.InputStream(samplerate=samplerate, channels=1, callback=callback):
-            start = time.time()
-            while time.time() - start < duration:
-                if not q.empty():
-                    file.write(q.get())
-
-    return filename
-
-# ---------- Распознавание речи ----------
-def transcribe(file_path):
-    with open(file_path, "rb") as f:
+# ==== 🧠 Распознавание речи ====
+def speech_to_text(filename):
+    with open(filename, "rb") as f:
         response = requests.post(
             "https://api.openai.com/v1/audio/transcriptions",
-            headers={"Authorization": f"Bearer {XI_API_KEY}"},
+            headers={"Authorization": f"Bearer {ELEVEN_API_KEY}"},
             files={"file": f},
-            data={"model": "whisper-1"},
+            data={"model": "whisper-1"}
         )
-    return response.json()["text"]
+    return response.json().get("text", "").lower()
 
-# ---------- Синтез речи ----------
-def speak(text):
-    print(f"🗣 {NAME}: {text}")
-    url = "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB/stream?output_format=mp3_44100_128"
-    headers = {
-        "xi-api-key": XI_API_KEY,
-        "Content-Type": "application/json"
-    }
-    data = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.7
+# ==== 🤖 Запрос к Grok ====
+def ask_grok(prompt):
+    history.append({"role": "user", "content": prompt})
+    response = requests.post(
+        "https://api.x.ai/v1/chat/completions",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {GROK_API_KEY}"
+        },
+        json={
+            "model": "grok-3-latest",
+            "messages": history,
+            "temperature": 0.7
         }
-    }
-    response = requests.post(url, headers=headers, json=data)
-    with open(TTS_FILE, "wb") as f:
+    )
+    reply = response.json()["choices"][0]["message"]["content"]
+    history.append({"role": "assistant", "content": reply})
+    save_memory()
+    return reply
+
+# ==== 🗣️ Озвучка через ElevenLabs ====
+def speak(text):
+    response = requests.post(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVEN_VOICE_ID}",
+        headers={
+            "xi-api-key": ELEVEN_API_KEY,
+            "Content-Type": "application/json"
+        },
+        json={
+            "text": text,
+            "model_id": "eleven_monolingual_v1",
+            "voice_settings": {"stability": 0.3, "similarity_boost": 0.7}
+        }
+    )
+    with open("response.wav", "wb") as f:
         f.write(response.content)
-    os.system(f"ffmpeg -y -i {TTS_FILE} -ar 44100 -ac 2 -f wav - | aplay -D {DEVICE}")
+    os.system("aplay -D plughw:0,0 response.wav")
 
-# ---------- Память ----------
-def load_history():
-    with open(HISTORY_FILE) as f:
-        return json.load(f)
+# ==== 🧼 Очистка памяти ====
+def clear_memory():
+    global history
+    history = [{"role": "system", "content": "Ты голосовой помощник по имени Джерри. Отвечай просто, с юмором."}]
+    save_memory()
 
-def save_history(history):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history[-20:], f)  # ограничим память до последних 20 сообщений
-
-# ---------- Обработка команд ----------
-def chat_with_grok(history):
-    url = "https://api.x.ai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {GROK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    messages = [{"role": "system", "content": f"Ты — ассистент по имени {NAME}, общаешься просто, с юмором и черным юмором. Помни, что ты Джерри."}]
-    messages.extend(history)
-    data = {
-        "model": "grok-3-latest",
-        "messages": messages,
-        "temperature": 0.7
-    }
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()["choices"][0]["message"]["content"]
-
-# ---------- Основной цикл ----------
-def jerry_loop():
-    print("🟢 Джерри слушает. Скажи 'Привет'...")
-    active = False
-    history = load_history()
-    last_active = datetime.now()
+# ==== 🌀 Главный цикл ====
+def main():
+    print("🎤 Джерри слушает... Скажи 'Привет' для активации.")
+    load_memory()
 
     while True:
-        audio_file = record_audio(5)
-        text = transcribe(audio_file).lower()
+        record_audio("input.wav", duration=2)
+        text = speech_to_text("input.wav")
+        if "привет" in text:
+            speak("Слушаю")
+            while True:
+                record_audio("command.wav", duration=10)
+                command = speech_to_text("command.wav")
+                print(f"🗣 Ты сказал: {command}")
 
-        if not text.strip():
-            continue
+                if not command.strip():
+                    speak("Поняла, ухожу в режим ожидания.")
+                    break
 
-        print(f"🧠 Ты сказал: {text}")
+                if "очисти память" in command:
+                    speak("Назови пароль.")
+                    record_audio("pass.wav", duration=5)
+                    password = speech_to_text("pass.wav")
+                    if PASSWORD in password:
+                        clear_memory()
+                        speak("Память очищена.")
+                    else:
+                        speak("Неверный пароль.")
+                    continue
 
-        if not active:
-            if WAKE_WORD in text:
-                speak("Слушаю")
-                active = True
-                last_active = datetime.now()
-        else:
-            if PASSWORD in text and "очисти" in text:
-                history = []
-                save_history(history)
-                speak("Память очищена.")
-            else:
-                history.append({"role": "user", "content": text})
-                reply = chat_with_grok(history)
-                history.append({"role": "assistant", "content": reply})
-                save_history(history)
-                speak(reply)
-                last_active = datetime.now()
+                answer = ask_grok(command)
+                speak(answer)
 
-            if (datetime.now() - last_active).seconds > LISTEN_TIMEOUT:
-                speak(GOODBYE)
-                active = False
-                print("🟡 В режим ожидания")
+                # Ожидаем ещё 15 сек. новую команду
+                print("⏳ Ожидание команды 15 сек...")
+                start = time.time()
+                while time.time() - start < 15:
+                    record_audio("check.wav", duration=2)
+                    new_text = speech_to_text("check.wav")
+                    if new_text.strip():
+                        command = new_text
+                        print(f"🗣 Повторная команда: {command}")
+                        answer = ask_grok(command)
+                        speak(answer)
+                        start = time.time()
+                    else:
+                        continue
 
-# ---------- Старт ----------
-def exit_handler(sig, frame):
-    print("\n[!] Выход.")
-    exit(0)
-
-signal.signal(signal.SIGINT, exit_handler)
+                speak("Поняла, ухожу в режим ожидания.")
+                break
 
 if __name__ == "__main__":
-    jerry_loop()
+    main()
