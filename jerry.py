@@ -6,7 +6,6 @@ import subprocess
 from io import BytesIO
 from elevenlabs.client import ElevenLabs
 from elevenlabs import Voice, VoiceSettings
-import openai  # для обращения к Grok (xAI)
 from dotenv import load_dotenv
 
 load_dotenv()
