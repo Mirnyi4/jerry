@@ -48,7 +48,7 @@ def transcribe_audio(filename=AUDIO_FILENAME):
             diarize=False,
             tag_audio_events=False
         )
-    return transcription.get("text", "")
+    return transcription.text or ""
 
 def ask_grok(prompt):
     url = "https://api.x.ai/v1/chat/completions"
