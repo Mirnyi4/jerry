@@ -1,100 +1,118 @@
-import speech_recognition as sr
+import os
 import time
+import wave
 import requests
-from elevenlabs import generate, play, Voice, VoiceSettings
+import subprocess
+from io import BytesIO
+from elevenlabs.client import ElevenLabs
+from elevenlabs import Voice, VoiceSettings
+import openai  # для обращения к Grok (xAI)
+from dotenv import load_dotenv
 
-# === НАСТРОЙКИ === #
+load_dotenv()
+
+# 🔑 Ключи
+ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY") or "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
+XAI_API_KEY = os.getenv("XAI_API_KEY") or "xai-E9xNjvychdMfLI0IUDpJ9T5kHAFh0xFDYcVxPtdwCYyBb7ynVABZQuSyPkx5NFSMFTga9bgyqTsXkBWU"
+
+# 🎙 Настройки
+MIC_DEVICE = "plughw:0,0"
+AUDIO_FILENAME = "input.wav"
+elevenlabs = ElevenLabs(api_key=ELEVEN_API_KEY)
+USER_NAME = "пользователь"
+JERRY_NAME = "Джерри"
 WAKE_WORD = "привет"
-API_GROK_KEY = "xai-zMjk4pJBgSuTmJIRvms8Op8OKM7WiBW1MTUAEtyRUoUCel3L9PqsB2Tib0AnXWro4BOB9V3dulo7OcUr"
-ELEVEN_API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"
+STATE = "sleep"
+history = []
 
-# === ПАМЯТЬ === #
-chat_history = [
-    {"role": "system", "content": "Ты голосовой ассистент Джерри. Общайся как быдло, кратко, с черным юмором и шути. Не извиняйся. Отвечай как человек с характером."}
-]
+def speak(text):
+    print(f"💬 Джерри: {text}")
+    audio = elevenlabs.generate(text=text, voice=Voice(
+        voice_id="21m00Tcm4TlvDq8ikWAM",  # пример: Rachel
+        settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
+    ))
+    with open("output.wav", "wb") as f:
+        for chunk in audio:
+            f.write(chunk)
+    subprocess.run(["aplay", "-D", MIC_DEVICE, "output.wav"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# === ПРОИЗНЕСЕНИЕ === #
-def say(text):
-    audio = generate(
-        api_key=ELEVEN_API_KEY,
-        text=text,
-        voice=Voice(
-            voice_id=ELEVEN_VOICE_ID,
-            settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
-        ),
-        model="eleven_multilingual_v2"
-    )
-    play(audio)
+def record_audio(filename=AUDIO_FILENAME, duration=5):
+    subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# === ЗАПРОС К GROK === #
-def send_to_grok(messages):
+def transcribe_audio(filename=AUDIO_FILENAME):
+    with open(filename, "rb") as f:
+        transcription = elevenlabs.speech_to_text.convert(
+            file=BytesIO(f.read()),
+            model_id="scribe_v1",
+            language_code="ru",  # русский
+            diarize=False,
+            tag_audio_events=False
+        )
+    return transcription.get("text", "")
+
+def ask_grok(prompt):
     url = "https://api.x.ai/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_GROK_KEY}"
+        "Authorization": f"Bearer {XAI_API_KEY}"
     }
     data = {
-        "messages": messages,
-        "model": "grok-1",
-        "temperature": 0.5
+        "model": "grok-3-latest",
+        "stream": False,
+        "temperature": 0.7,
+        "messages": history + [{"role": "user", "content": prompt}]
     }
     response = requests.post(url, headers=headers, json=data)
-    if response.ok:
-        return response.json()["choices"][0]["message"]["content"]
-    else:
-        return "Что-то с Grok не так. Гори оно огнем."
+    response.raise_for_status()
+    content = response.json()["choices"][0]["message"]["content"]
+    history.append({"role": "user", "content": prompt})
+    history.append({"role": "assistant", "content": content})
+    return content
 
-# === РАСПОЗНАВАНИЕ РЕЧИ === #
-def recognize_speech(recognizer, mic):
-    with mic as source:
-        print("🎧 Слушаю...")
-        audio = recognizer.listen(source, timeout=15, phrase_time_limit=10)
-    try:
-        text = recognizer.recognize_google(audio, language="ru-RU").lower()
-        print(f"🗣 Ты сказал: {text}")
-        return text
-    except sr.UnknownValueError:
-        print("🤖 Не понял")
-        return ""
-    except sr.RequestError:
-        return "Ошибка подключения"
-
-# === ОСНОВНОЙ ЦИКЛ === #
-def assistant_loop():
-    global chat_history
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    last_input_time = time.time()
-
+def main_loop():
+    global STATE
+    print("🎤 Джерри слушает... Скажи 'Привет' для активации.")
     while True:
-        text = recognize_speech(recognizer, mic)
-        if WAKE_WORD in text:
-            say("Слушаю")
-            last_input_time = time.time()
-            while True:
-                user_text = recognize_speech(recognizer, mic)
-                if not user_text:
-                    if time.time() - last_input_time > 15:
-                        say("Поняла, ухожу в режим ожидания.")
-                        break
-                    continue
+        record_audio(duration=3)
+        text = transcribe_audio()
+        if not text:
+            continue
 
-                last_input_time = time.time()
+        if STATE == "sleep":
+            if WAKE_WORD in text.lower():
+                STATE = "active"
+                speak("Слушаю.")
+                print("🎙 Ожидаю команду...")
+        elif STATE == "active":
+            print(f"📥 Ты сказал: {text}")
+            if "пока" in text.lower():
+                speak("Поняла, ухожу в режим ожидания.")
+                STATE = "sleep"
+                continue
+            try:
+                response = ask_grok(text)
+                speak(response)
+            except Exception as e:
+                speak("Произошла ошибка.")
+                print(e)
+            timeout = time.time() + 15
+            while time.time() < timeout:
+                record_audio(duration=3)
+                followup = transcribe_audio()
+                if followup.strip():
+                    print(f"📥 Продолжение: {followup}")
+                    try:
+                        response = ask_grok(followup)
+                        speak(response)
+                        timeout = time.time() + 15
+                    except Exception as e:
+                        speak("Ошибка при ответе.")
+                        print(e)
+                else:
+                    speak("Поняла, ухожу в режим ожидания.")
+                    STATE = "sleep"
+                    break
 
-                if "очисти память" in user_text:
-                    chat_history = chat_history[:1]
-                    say("Очистила всё к чертям")
-                    continue
-
-                chat_history.append({"role": "user", "content": user_text})
-                bot_reply = send_to_grok(chat_history)
-                chat_history.append({"role": "assistant", "content": bot_reply})
-                say(bot_reply)
-
-# === ЗАПУСК === #
 if __name__ == "__main__":
-    try:
-        assistant_loop()
-    except KeyboardInterrupt:
-        print("Выключаюсь...")
+    main_loop()
