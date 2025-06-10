@@ -25,15 +25,16 @@ STATE = "sleep"
 history = []
 
 def speak(text):
-    print(f"💬 Джерри: {text}")
-    audio = elevenlabs.generate(text=text, voice=Voice(
-        voice_id="21m00Tcm4TlvDq8ikWAM",  # пример: Rachel
-        settings=VoiceSettings(stability=0.4, similarity_boost=0.75)
-    ))
-    with open("output.wav", "wb") as f:
-        for chunk in audio:
-            f.write(chunk)
-    subprocess.run(["aplay", "-D", MIC_DEVICE, "output.wav"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"\n💬 Джерри: {text}")
+    audio = elevenlabs.text_to_speech.convert(
+        voice_id="Josh",  # можешь сменить на нужного
+        model_id="eleven_monolingual_v1",  # либо другой доступный тебе
+        text=text,
+        output_format="mp3_44100_64",  # бесплатный формат, разрешённый без Pro
+    )
+    with open("output.mp3", "wb") as f:
+        f.write(b"".join(audio))
+    os.system("ffplay -nodisp -autoexit output.mp3 >/dev/null 2>&1")
 
 def record_audio(filename=AUDIO_FILENAME, duration=5):
     subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
