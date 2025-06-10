@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 🔑 Ключи
-ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY") or "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-XAI_API_KEY = os.getenv("XAI_API_KEY") or "xai-Sx2f3n7EvhNjndeGLJphDvW0dlZ5lHeFkDfubPPQfjgNMIOqe6KviN9ehaG2SG4X73aOgdCbkkLY6eMB"
+XAI_API_KEY = os.getenv("XAI_API_KEY")
+ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
 # 🎙 Настройки
 MIC_DEVICE = "plughw:0,0"
