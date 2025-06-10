@@ -12,7 +12,7 @@ load_dotenv()
 
 # 🔑 Ключи
 ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY") or "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"
-XAI_API_KEY = os.getenv("XAI_API_KEY") or "xai-E9xNjvychdMfLI0IUDpJ9T5kHAFh0xFDYcVxPtdwCYyBb7ynVABZQuSyPkx5NFSMFTga9bgyqTsXkBWU"
+XAI_API_KEY = os.getenv("XAI_API_KEY") or "xai-ouuxbZI856lMUlXX1oFIdwWR3eJAVVuM69IPIWN9YrOrimNMd8n9XNLJ1nzbcLpsaPrJ3eroQpIiniuN"
 
 # 🎙 Настройки
 MIC_DEVICE = "plughw:0,0"
@@ -27,7 +27,7 @@ history = []
 def speak(text):
     print(f"\n💬 Джерри: {text}")
     audio = elevenlabs.text_to_speech.convert(
-        voice_id="JBFqnCBsd6RMkjVDRZzb",  # можешь сменить на нужного
+        voice_id="D38z5RcWu1voky8WS1ja",  # можешь сменить на нужного
         model_id="eleven_monolingual_v1",  # либо другой доступный тебе
         text=text,
         output_format="mp3_44100_64",  # бесплатный формат, разрешённый без Pro
