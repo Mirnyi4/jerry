@@ -34,7 +34,7 @@ def speak(text):
     )
     with open("output.mp3", "wb") as f:
         f.write(b"".join(audio))
-    os.system("ffplay -nodisp -autoexit -ao alsa:device=plughw=0,0 output.mp3 >/dev/null 2>&1")
+    os.system("ffmpeg -hide_banner -loglevel error -i output.mp3 -f wav - | aplay -D plughw:0,0")
 
 def record_audio(filename=AUDIO_FILENAME, duration=5):
     subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
