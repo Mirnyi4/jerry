@@ -27,7 +27,7 @@ history = []
 def speak(text):
     print(f"\n💬 Джерри: {text}")
     audio = elevenlabs.text_to_speech.convert(
-        voice_id="Josh",  # можешь сменить на нужного
+        voice_id="JBFqnCBsd6RMkjVDRZzb",  # можешь сменить на нужного
         model_id="eleven_monolingual_v1",  # либо другой доступный тебе
         text=text,
         output_format="mp3_44100_64",  # бесплатный формат, разрешённый без Pro
