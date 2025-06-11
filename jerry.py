@@ -27,7 +27,7 @@ history = []
 def speak(text):
     print(f"\n💬 Джерри: {text}")
     audio = elevenlabs.text_to_speech.convert(
-        voice_id="D38z5RcWu1voky8WS1ja",  # можешь сменить на нужного
+        voice_id="TX3LPaxmHKxFdv7VOQHJ",  # можешь сменить на нужного
         model_id="eleven_monolingual_v1",  # либо другой доступный тебе
         text=text,
         output_format="mp3_44100_64",  # бесплатный формат, разрешённый без Pro
@@ -57,11 +57,18 @@ def ask_grok(prompt):
         "Content-Type": "application/json",
         "Authorization": f"Bearer {XAI_API_KEY}"
     }
+    system_prompt = {
+        "role": "system",
+        "content": (
+            "Ты голосовой помощник по имени Джерри. "
+            "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений."
+        )
+    }
     data = {
         "model": "grok-3-latest",
         "stream": False,
         "temperature": 0.7,
-        "messages": history + [{"role": "user", "content": prompt}]
+        "messages": [system_prompt] + history + [{"role": "user", "content": prompt}]
     }
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
