@@ -1,6 +1,16 @@
+import os
+from dotenv import load_dotenv
+from elevenlabs import ElevenLabs
 
-# Вставь свой ключ (или используй переменную окружения)
-API_KEY = "sk_cd7225a5b96a922efa4da311b752fdf96e70d009dca6a46d"  # не вставляй сюда в код, используй .env
+# Загрузка переменных из .env
+load_dotenv()
+
+# Получение API-ключа из переменной окружения
+API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+if not API_KEY:
+    print("❌ Ключ ELEVENLABS_API_KEY не найден в .env")
+    exit(1)
 
 client = ElevenLabs(api_key=API_KEY)
 
