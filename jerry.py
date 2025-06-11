@@ -27,7 +27,7 @@ history = []
 def speak(text):
     print(f"\n💬 Джерри: {text}")
     audio = elevenlabs.text_to_speech.convert(
-        voice_id="D38z5RcWu1voky8WS1ja",
+        voice_id="Obuyk6KKzg9olSLPaCbl",
         model_id="eleven_multilingual_v2",
         text=text,
         output_format="pcm_24000",  # формат raw PCM доступен с платной подпиской
