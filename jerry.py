@@ -36,7 +36,7 @@ def speak(text):
     with open("output.wav", "wb") as f:
         f.write(b"".join(audio))
 
-    os.system("aplay -D plughw:0,0 output.wav")
+    os.system("aplay -D plughw:0,0 -c 1 -f S16_LE -r 24000 output.wav")
 
 
 def record_audio(filename=AUDIO_FILENAME, duration=5):
