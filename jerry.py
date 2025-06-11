@@ -27,17 +27,17 @@ history = []
 def speak(text):
     print(f"\n💬 Джерри: {text}")
     audio = elevenlabs.text_to_speech.convert(
-    voice_id="D38z5RcWu1voky8WS1ja",
-    model_id="eleven_multilingual_v2",
-    text=text,
-    output_format="pcm_24000",  # формат raw PCM
-)
+        voice_id="D38z5RcWu1voky8WS1ja",
+        model_id="eleven_multilingual_v2",
+        text=text,
+        output_format="pcm_24000",  # формат raw PCM доступен с платной подпиской
+    )
 
-with open("output.wav", "wb") as f:
-    f.write(b"".join(audio))
+    with open("output.wav", "wb") as f:
+        f.write(b"".join(audio))
 
-# проигрывание без ffmpeg, сразу через aplay:
-os.system("aplay -D plughw:0,0 output.wav")
+    os.system("aplay -D plughw:0,0 output.wav")
+
 
 def record_audio(filename=AUDIO_FILENAME, duration=5):
     subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
