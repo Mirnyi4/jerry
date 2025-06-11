@@ -18,7 +18,7 @@ ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 MIC_DEVICE = "plughw:0,0"
 AUDIO_FILENAME = "input.wav"
 elevenlabs = ElevenLabs(api_key=ELEVEN_API_KEY)
-USER_NAME = "пользователь"
+USER_NAME = "Владислав"
 JERRY_NAME = "Джерри"
 WAKE_WORD = "привет"
 STATE = "sleep"
@@ -120,7 +120,7 @@ def main_loop():
                         speak("Ошибка при ответе.")
                         print(e)
                 else:
-                    speak("Поняла, ухожу в режим ожидания.")
+                    speak("Понял, ухожу в режим ожидания.")
                     STATE = "sleep"
                     break
 
