@@ -3,6 +3,7 @@ import time
 import wave
 import requests
 import subprocess
+import json
 from io import BytesIO
 from elevenlabs.client import ElevenLabs
 from elevenlabs import Voice, VoiceSettings
@@ -14,15 +15,44 @@ load_dotenv()
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-# 🎙 Настройки
+# 🎙 Настройки микрофона и аудио
 MIC_DEVICE = "plughw:0,0"
 AUDIO_FILENAME = "input.wav"
 elevenlabs = ElevenLabs(api_key=ELEVEN_API_KEY)
 USER_NAME = "Владислав"
 JERRY_NAME = "Джерри"
-WAKE_WORD = "привет"
+
 STATE = "sleep"
 history = []
+
+# Файл настроек, который редактируется через веб
+SETTINGS_FILE = "settings.json"
+
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Ошибка чтения настроек: {e}")
+    # Значения по умолчанию, если файла нет или ошибка
+    return {
+        "wake_word": "привет",
+        "style": (
+            "Ты голосовой помощник по имени Джерри. "
+            "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений."
+        )
+    }
+
+settings = load_settings()
+WAKE_WORD = settings.get("wake_word", "привет")
+STYLE_PROMPT = settings.get("style", "")
+
+def reload_settings():
+    global settings, WAKE_WORD, STYLE_PROMPT
+    settings = load_settings()
+    WAKE_WORD = settings.get("wake_word", "привет")
+    STYLE_PROMPT = settings.get("style", "")
 
 def speak(text):
     print(f"\n💬 Джерри: {text}")
@@ -38,10 +68,11 @@ def speak(text):
 
     os.system("aplay -D plughw:0,0 -c 1 -f S16_LE -r 24000 output.wav")
 
-
 def record_audio(filename=AUDIO_FILENAME, duration=5):
-    subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
 def transcribe_audio(filename=AUDIO_FILENAME):
     with open(filename, "rb") as f:
@@ -62,10 +93,7 @@ def ask_grok(prompt):
     }
     system_prompt = {
         "role": "system",
-        "content": (
-            "Ты голосовой помощник по имени Джерри. "
-            "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений."
-        )
+        "content": STYLE_PROMPT
     }
     data = {
         "model": "grok-3-latest",
@@ -82,15 +110,18 @@ def ask_grok(prompt):
 
 def main_loop():
     global STATE
-    print("🎤 Джерри слушает... Скажи 'Привет' для активации.")
+    print("🎤 Джерри слушает... Скажи '{}' для активации.".format(WAKE_WORD))
     while True:
         record_audio(duration=3)
         text = transcribe_audio()
         if not text:
             continue
 
+        # Можно обновлять настройки раз в цикл, если надо
+        reload_settings()
+
         if STATE == "sleep":
-            if WAKE_WORD in text.lower():
+            if WAKE_WORD.lower() in text.lower():
                 STATE = "active"
                 speak("Слушаю.")
                 print("🎙 Ожидаю команду...")
