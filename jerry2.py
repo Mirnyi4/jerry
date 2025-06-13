@@ -141,18 +141,19 @@ async def telegram_logic(command):
         return True
 
     if command.startswith("найди"):
-        name = command.replace("найди", "").strip().lower()
-        contacts = await client.get_contacts()
+    name = command.replace("найди", "").strip()
+    result = await client(SearchRequest(q=name, limit=10))
 
-        for user in contacts:
-            full_name = f"{user.first_name or ''} {user.last_name or ''}".strip().lower()
-            username = user.username.lower() if user.username else ""
-            if name in full_name or name in username:
-                latest_chat = user
-                speak(f"Нашёл {user.first_name}. Что ему написать?")
-                return True
+    # Фильтруем только личные контакты (не группы, не каналы)
+    users = [user for user in result.users if not user.bot and not user.min]
 
-        speak("Никого не нашёл среди контактов.")
+    if users:
+        user = users[0]
+        latest_chat = user
+        speak(f"Нашёл {user.first_name}. Что ему написать?")
+        return True
+    else:
+        speak("Не нашёл такого контакта.")
         return True
     return False
 
