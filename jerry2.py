@@ -1,4 +1,5 @@
 import os
+import difflib
 import time
 import json
 import requests
@@ -132,14 +133,26 @@ async def telegram_logic(command):
 
 
 async def find_contact_by_name(name):
-    name = name.lower()
+    name = name.lower().strip()
     dialogs = await client.get_dialogs()
+    contact_names = {}
+
     for dialog in dialogs:
         entity = dialog.entity
         if dialog.is_user and hasattr(entity, 'first_name'):
             full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip().lower()
-            if name in full_name:
-                return entity
+            contact_names[full_name] = entity
+
+    # Ищем прямое частичное вхождение
+    for contact_name, entity in contact_names.items():
+        if name in contact_name:
+            return entity
+
+    # Ищем похожие совпадения (опечатки и близкие варианты)
+    close_matches = difflib.get_close_matches(name, contact_names.keys(), n=1, cutoff=0.6)
+    if close_matches:
+        return contact_names[close_matches[0]]
+
     return None
 
 async def main_loop():
