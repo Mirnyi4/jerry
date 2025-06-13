@@ -1,138 +1,92 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Настройки помощника by. Mirnyi424</title>
-  <style>
-    body {
-      background: #282c34;
-      color: #eee;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px 0;
-      margin: 0;
-    }
-    .container {
-      background: #3b3f4a;
-      padding: 30px;
-      border-radius: 10px;
-      width: 600px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.7);
-    }
-    h1 {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input[type="text"], input[type="password"], textarea, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: none;
-      border-radius: 5px;
-      resize: vertical;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 15px;
-      width: 100%;
-      padding: 10px;
-      background: #61dafb;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      color: #282c34;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #21a1f1;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .flash {
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-    .success {
-      background: #4caf50;
-      color: white;
-    }
-    .error {
-      background: #f44336;
-      color: white;
-    }
-    .wifi-status {
-      margin-top: 10px;
-      font-size: 16px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Настройки Джерри и Wi-Fi</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #eee; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; }
+        h1 { margin-bottom: 1rem; text-align: center; }
+        label { display: block; margin-top: 1rem; font-weight: bold; }
+        input[type=text], textarea, select, input[type=password] {
+            width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px; border: none;
+            background: #555; color: #eee; font-size: 1rem;
+        }
+        button {
+            margin-top: 1.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
+            background: #4CAF50; color: white; font-size: 1rem; cursor: pointer;
+        }
+        button:hover { background: #45a049; }
+        .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .wifi-section { margin-top: 2rem; }
+        .network-list { margin-top: 1rem; max-height: 150px; overflow-y: auto; background: #222; padding: 0.5rem; border-radius: 4px; }
+        .network-item { padding: 0.3rem 0; border-bottom: 1px solid #444; }
+        .current-connection { font-weight: bold; color: #4CAF50; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Настройки помощника by.Mirnyi424</h1>
+<div class="container">
+    <h1>Настройки Джерри и Wi-Fi</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% with messages = get_flashed_messages() %}
       {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <div class="section">
-      <h2>Настройки Джерри</h2>
-      <form method="POST">
-        <label for="wake_word">Кодовое слово (Wake Word)</label>
-        <input type="text" id="wake_word" name="wake_word" value="{{ settings.wake_word }}" required />
+    <form method="POST" action="{{ url_for('index') }}">
+        <label for="wake_word">Ключевое слово для активации:</label>
+        <input type="text" id="wake_word" name="wake_word" value="{{ config.wake_word }}" required />
 
-        <label for="system_prompt">Промт для стиля общения</label>
-        <textarea id="system_prompt" name="system_prompt" rows="6" required>{{ settings.system_prompt }}</textarea>
+        <label for="style_prompt">Стиль общения (промт):</label>
+        <textarea id="style_prompt" name="style_prompt" rows="4" required>{{ config.style_prompt }}</textarea>
 
-        <label for="voice_id">Голос Джерри</label>
+        <label for="voice_id">Голос:</label>
         <select id="voice_id" name="voice_id" required>
-          <option value="Obuyk6KKzg9olSLPaCbl" {% if settings.voice_id == 'Obuyk6KKzg9olSLPaCbl' %}selected{% endif %}>Аркадий</option>
-          <option value="gedzfqL7OGdPbwm0ynTP" {% if settings.voice_id == 'gedzfqL7OGdPbwm0ynTP' %}selected{% endif %}>Надя</option>
-          <option value="pvY1pikBdoI4SB62vEVo" {% if settings.voice_id == 'pvY1pikBdoI4SB62vEVo' %}selected{% endif %}>Андрей</option>
-          <option value="ymDCYd8puC7gYjxIamPt" {% if settings.voice_id == 'ymDCYd8puC7gYjxIamPt' %}selected{% endif %}>Тетя Зина</option>
+            <option value="Obuyk6KKzg9olSLPaCbl" {% if config.voice_id == 'Obuyk6KKzg9olSLPaCbl' %}selected{% endif %}>Аркадий</option>
+            <option value="gedzfqL7OGdPbwm0ynTP" {% if config.voice_id == 'gedzfqL7OGdPbwm0ynTP' %}selected{% endif %}>Надя</option>
+            <option value="pvY1pikBdoI4SB62vEVo" {% if config.voice_id == 'pvY1pikBdoI4SB62vEVo' %}selected{% endif %}>Андрей</option>
+            <option value="ymDCYd8puC7gYjxIamPt" {% if config.voice_id == 'ymDCYd8puC7gYjxIamPt' %}selected{% endif %}>Тетя Зина</option>
         </select>
 
-        <button type="submit" name="save_settings">Сохранить настройки Джерри.</button>
-      </form>
+        <button type="submit">Сохранить настройки</button>
+    </form>
+
+    <div class="wifi-section">
+        <h2>Wi-Fi сети</h2>
+        <p>Текущая сеть: 
+          {% if current_connection %}
+            <span class="current-connection">{{ current_connection }}</span>
+          {% else %}
+            Нет подключения
+          {% endif %}
+        </p>
+
+        <div class="network-list">
+            {% for net in networks %}
+                <div class="network-item">{{ net }}</div>
+            {% else %}
+                <div>Нет доступных сетей</div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" action="{{ url_for('connect') }}" style="margin-top: 1rem;">
+            <label for="ssid">SSID:</label>
+            <input type="text" id="ssid" name="ssid" required />
+
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required />
+
+            <button type="submit">Подключиться</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('disconnect') }}" style="margin-top: 1rem;">
+            <button type="submit" style="background:#e74c3c;">Отключиться от Wi-Fi</button>
+        </form>
     </div>
-
-    <div class="section">
-      <h2>Управление Wi-Fi</h2>
-      <div class="wifi-status">
-        Статус: {{ wifi.state }}<br />
-        Подключено к: {{ wifi.connection if wifi.connection else "Нет подключения" }}
-      </div>
-
-      <form method="POST" style="margin-top: 15px;">
-        <label for="ssid">SSID</label>
-        <input type="text" id="ssid" name="ssid" placeholder="Имя Wi-Fi сети" />
-
-        <label for="password">Пароль</label>
-        <input type="password" id="password" name="password" placeholder="Пароль Wi-Fi" />
-
-        <button type="submit" name="connect_wifi">Подключиться к Wi-Fi</button>
-      </form>
-
-      <form method="POST" style="margin-top: 10px;">
-        <button type="submit" name="disconnect_wifi">Отключить Wi-Fi</button>
-      </form>
-    </div>
-  </div>
+</div>
 </body>
 </html>
