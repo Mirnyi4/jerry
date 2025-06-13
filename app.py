@@ -1,99 +1,69 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import json
-import subprocess
+import os
+import wifi  # модуль wifi.py должен лежать рядом
+
+CONFIG_PATH = "config.json"
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # нужно для flash сообщений
+app.secret_key = "your_secret_key"  # нужно для flash-сообщений
 
-SETTINGS_FILE = "settings.json"
 
-def load_settings():
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        default = {
+def load_config():
+    if not os.path.exists(CONFIG_PATH):
+        return {
             "wake_word": "привет",
-            "system_prompt": "Ты голосовой помощник по имени Джерри. Отвечай кратко...",
+            "style_prompt": "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений.",
+            "voice_id": "Obuyk6KKzg9olSLPaCbl"
         }
-        save_settings(default)
-        return default
+    with open(CONFIG_PATH, "r") as f:
+        return json.load(f)
 
-def save_settings(data):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
-def get_wifi_status():
-    try:
-        result = subprocess.run(
-            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"],
-            capture_output=True, text=True, check=True
-        )
-        lines = result.stdout.strip().split("\n")
-        for line in lines:
-            parts = line.split(":")
-            if len(parts) == 4 and parts[1] == "wifi":
-                return {
-                    "device": parts[0],
-                    "state": parts[2],
-                    "connection": parts[3] if parts[3] != "--" else None,
-                }
-    except Exception as e:
-        return {"device": None, "state": "unknown", "connection": None}
+def save_config(config):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
-def connect_wifi(ssid, password):
-    try:
-        # Создаем подключение или обновляем пароль
-        subprocess.run(
-            ["nmcli", "device", "wifi", "connect", ssid, "password", password],
-            check=True, capture_output=True, text=True,
-        )
-        return True, f"Подключено к {ssid}"
-    except subprocess.CalledProcessError as e:
-        return False, e.stderr.strip()
-
-def disconnect_wifi(device):
-    try:
-        subprocess.run(
-            ["nmcli", "device", "disconnect", device],
-            check=True, capture_output=True, text=True,
-        )
-        return True, "Wi-Fi отключен"
-    except subprocess.CalledProcessError as e:
-        return False, e.stderr.strip()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    settings = load_settings()
-    wifi = get_wifi_status()
+    config = load_config()
 
     if request.method == "POST":
-        if "save_settings" in request.form:
-            # Сохраняем настройки Джерри
-            settings["wake_word"] = request.form.get("wake_word", settings["wake_word"])
-            settings["system_prompt"] = request.form.get("system_prompt", settings["system_prompt"])
-            save_settings(settings)
-            flash("Настройки Джерри сохранены", "success")
-
-        elif "connect_wifi" in request.form:
-            ssid = request.form.get("ssid")
-            password = request.form.get("password")
-            if ssid and password:
-                success, msg = connect_wifi(ssid, password)
-                flash(msg, "success" if success else "error")
-            else:
-                flash("Введите SSID и пароль", "error")
-
-        elif "disconnect_wifi" in request.form:
-            if wifi["device"]:
-                success, msg = disconnect_wifi(wifi["device"])
-                flash(msg, "success" if success else "error")
-            else:
-                flash("Wi-Fi устройство не найдено", "error")
-
+        config["wake_word"] = request.form.get("wake_word", "").strip()
+        config["style_prompt"] = request.form.get("style_prompt", "").strip()
+        config["voice_id"] = request.form.get("voice_id", "").strip()
+        save_config(config)
+        flash("✅ Настройки сохранены!")
         return redirect(url_for("index"))
 
-    return render_template("index.html", settings=settings, wifi=wifi)
+    current_connection = wifi.get_current_connection()
+    networks = wifi.scan_networks()
+    return render_template("index.html", config=config, current_connection=current_connection, networks=networks)
+
+
+@app.route("/connect", methods=["POST"])
+def connect():
+    ssid = request.form.get("ssid")
+    password = request.form.get("password")
+    if not ssid or not password:
+        flash("❌ Укажите сеть и пароль!")
+        return redirect(url_for("index"))
+
+    success = wifi.connect_to_network(ssid, password)
+    if success:
+        flash(f"✅ Подключено к {ssid}")
+    else:
+        flash(f"❌ Не удалось подключиться к {ssid}")
+    return redirect(url_for("index"))
+
+
+@app.route("/disconnect", methods=["POST"])
+def disconnect():
+    wifi.disconnect()
+    flash("🔌 Wi-Fi отключён")
+    return redirect(url_for("index"))
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
