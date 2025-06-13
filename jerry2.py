@@ -140,7 +140,7 @@ async def telegram_logic(command):
         await client.send_message(latest_chat, text)
         return True
 
-   if command.startswith("найди"):
+    if command.startswith("найди"):
         name = command.replace("найди", "").strip()
         result = await client(SearchRequest(q=name, limit=10))
 
