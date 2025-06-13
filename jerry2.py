@@ -90,10 +90,14 @@ def ask_grok(prompt):
     history.append({"role": "assistant", "content": content})
     return content
 
+latest_chat = None
+latest_sender = None
+
 async def telegram_logic(command):
-    global latest_sender, latest_chat
+    global latest_chat, latest_sender
     command = command.lower()
 
+    # Получить последнее сообщение из диалогов
     if "кто мне написал" in command or "последнее сообщение" in command:
         dialogs = await client.get_dialogs(limit=10)
         for dialog in dialogs:
@@ -113,12 +117,14 @@ async def telegram_logic(command):
                     speak(f"{answer}. {commentary}")
                     return True
 
+    # Ответить на последнее сообщение
     if command.startswith("ответь ему") and latest_sender:
         text = command.replace("ответь ему", "").strip()
         speak(f"Ок, пишу: {text}")
         await client.send_message(latest_chat, text)
         return True
 
+    # Найти контакт по имени
     if "найди" in command and "чат" not in command:
         name = command.replace("найди", "").strip()
         user = await find_contact_by_name(name)
@@ -129,30 +135,27 @@ async def telegram_logic(command):
             speak("Не нашёл такого контакта.")
         return True
 
+    # Отправить сообщение найденному контакту
+    if command.startswith("напиши "):
+        text_to_send = command.replace("напиши ", "").strip()
+        if latest_chat:
+            speak(f"Пишу: {text_to_send}")
+            await client.send_message(latest_chat, text_to_send)
+        else:
+            speak("Не выбран получатель для сообщения.")
+        return True
+
     return False
 
-
 async def find_contact_by_name(name):
-    name = name.lower().strip()
+    name = name.lower()
     dialogs = await client.get_dialogs()
-    contact_names = {}
-
     for dialog in dialogs:
         entity = dialog.entity
         if dialog.is_user and hasattr(entity, 'first_name'):
             full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip().lower()
-            contact_names[full_name] = entity
-
-    # Ищем прямое частичное вхождение
-    for contact_name, entity in contact_names.items():
-        if name in contact_name:
-            return entity
-
-    # Ищем похожие совпадения (опечатки и близкие варианты)
-    close_matches = difflib.get_close_matches(name, contact_names.keys(), n=1, cutoff=0.6)
-    if close_matches:
-        return contact_names[close_matches[0]]
-
+            if name in full_name:
+                return entity
     return None
 
 async def main_loop():
