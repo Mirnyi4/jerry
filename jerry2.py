@@ -6,20 +6,19 @@ import subprocess
 from io import BytesIO
 from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 from telethon.tl.functions.messages import GetHistoryRequest
 from telethon.tl.functions.contacts import SearchRequest
 
 load_dotenv()
 
-# 🔑 Ключи
+# 🔑 Ключи и настройки
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("TELEGRAM_PHONE")
 
-# 🎙 Настройки
 MIC_DEVICE = "plughw:0,0"
 AUDIO_FILENAME = "input.wav"
 CONFIG_PATH = "config.json"
@@ -28,7 +27,7 @@ history = []
 latest_sender = None
 latest_chat = None
 
-client = TelegramClient('session_name', API_ID, API_HASH)
+client = TelegramClient('session_jerry', API_ID, API_HASH)
 elevenlabs = ElevenLabs(api_key=ELEVEN_API_KEY)
 
 
@@ -58,8 +57,11 @@ def speak(text):
 
 
 def record_audio(filename=AUDIO_FILENAME, duration=3):
-    subprocess.run(["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
 
 
 def transcribe_audio(filename=AUDIO_FILENAME):
@@ -94,6 +96,8 @@ def ask_grok(prompt):
 
 async def telegram_logic(command):
     global latest_sender, latest_chat
+    command = command.lower()
+
     if "кто мне написал" in command or "последнее сообщение" in command:
         dialogs = await client.get_dialogs(limit=1)
         chat = dialogs[0].entity
@@ -106,8 +110,8 @@ async def telegram_logic(command):
         commentary = ask_grok(answer)
         speak(f"{answer}. {commentary}")
         return True
-    
-    if "ответь ему" in command and latest_sender:
+
+    if command.startswith("ответь ему") and latest_sender:
         text = command.replace("ответь ему", "").strip()
         speak(f"Ок, пишу: {text}")
         await client.send_message(latest_chat, text)
@@ -176,6 +180,7 @@ async def main_loop():
                     speak("Понял, ухожу в режим ожидания.")
                     STATE = "sleep"
                     break
+
 
 if __name__ == "__main__":
     with client:
