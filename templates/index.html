@@ -1,130 +1,68 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Настройки Джерри и Wi-Fi</title>
-  <style>
-    body {
-      background: #282c34;
-      color: #eee;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px 0;
-      margin: 0;
-    }
-    .container {
-      background: #3b3f4a;
-      padding: 30px;
-      border-radius: 10px;
-      width: 600px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.7);
-    }
-    h1 {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input[type="text"], input[type="password"], textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: none;
-      border-radius: 5px;
-      resize: vertical;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 15px;
-      width: 100%;
-      padding: 10px;
-      background: #61dafb;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      color: #282c34;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #21a1f1;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .flash {
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-    .success {
-      background: #4caf50;
-      color: white;
-    }
-    .error {
-      background: #f44336;
-      color: white;
-    }
-    .wifi-status {
-      margin-top: 10px;
-      font-size: 16px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Настройки Джерри</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="container">
-    <h1>Настройки Джерри и Wi-Fi</h1>
+    <div class="container">
+        <h1>⚙️ Аудиопомощник by Mirnyi424</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class="flash-messages">
+              {% for message in messages %}
+                <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
 
-    <div class="section">
-      <h2>Настройки Джерри</h2>
-      <form method="POST">
-        <label for="wake_word">Кодовое слово (Wake Word)</label>
-        <input type="text" id="wake_word" name="wake_word" value="{{ settings.wake_word }}" required />
+        <form method="POST">
+            <div class="form-group">
+                <label for="wake_word">Ключевое слово:</label>
+                <input type="text" id="wake_word" name="wake_word" value="{{ config.wake_word }}">
+            </div>
 
-        <label for="system_prompt">Промт для стиля общения</label>
-        <textarea id="system_prompt" name="system_prompt" rows="6" required>{{ settings.system_prompt }}</textarea>
+            <div class="form-group">
+                <label for="style_prompt">Стиль общения:</label>
+                <textarea id="style_prompt" name="style_prompt" rows="4">{{ config.style_prompt }}</textarea>
+            </div>
 
-        <button type="submit" name="save_settings">Сохранить настройки Джерри</button>
-      </form>
+            <div class="form-group">
+                <label for="voice_id">Голос:</label>
+                <select name="voice_id" id="voice_id">
+                    <option value="Obuyk6KKzg9olSLPaCbl" {% if config.voice_id == "Obuyk6KKzg9olSLPaCbl" %}selected{% endif %}>Аркадий</option>
+                    <option value="gedzfqL7OGdPbwm0ynTP" {% if config.voice_id == "gedzfqL7OGdPbwm0ynTP" %}selected{% endif %}>Надя</option>
+                    <option value="pvY1pikBdoI4SB62vEVo" {% if config.voice_id == "pvY1pikBdoI4SB62vEVo" %}selected{% endif %}>Андрей</option>
+                    <option value="ymDCYd8puC7gYjxIamPt" {% if config.voice_id == "ymDCYd8puC7gYjxIamPt" %}selected{% endif %}>Тётя Зина</option>
+                </select>
+            </div>
+
+            <button type="submit">💾 Сохранить</button>
+        </form>
+
+        <hr>
+
+        <h2>📶 Wi-Fi</h2>
+        <p>Текущая сеть: <strong>{{ current_connection or 'Не подключен' }}</strong></p>
+        {% if current_connection %}
+            <form method="POST" action="/disconnect">
+                <button type="submit">🔌 Отключиться</button>
+            </form>
+        {% endif %}
+
+        <h3>Доступные сети:</h3>
+        <form method="POST" action="/connect">
+            <select name="ssid">
+                {% for network in networks %}
+                    <option value="{{ network }}">{{ network }}</option>
+                {% endfor %}
+            </select>
+            <input type="password" name="password" placeholder="Пароль">
+            <button type="submit">📡 Подключиться</button>
+        </form>
     </div>
-
-    <div class="section">
-      <h2>Управление Wi-Fi</h2>
-      <div class="wifi-status">
-        Статус: {{ wifi.state }}<br />
-        Подключено к: {{ wifi.connection if wifi.connection else "Нет подключения" }}
-      </div>
-
-      <form method="POST" style="margin-top: 15px;">
-        <label for="ssid">SSID</label>
-        <input type="text" id="ssid" name="ssid" placeholder="Имя Wi-Fi сети" />
-
-        <label for="password">Пароль</label>
-        <input type="password" id="password" name="password" placeholder="Пароль Wi-Fi" />
-
-        <button type="submit" name="connect_wifi">Подключиться к Wi-Fi</button>
-      </form>
-
-      <form method="POST" style="margin-top: 10px;">
-        <button type="submit" name="disconnect_wifi">Отключить Wi-Fi</button>
-      </form>
-    </div>
-  </div>
 </body>
 </html>
