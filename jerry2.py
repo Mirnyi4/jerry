@@ -141,11 +141,11 @@ async def telegram_logic(command):
         return True
 
    if command.startswith("найди"):
-    name = command.replace("найди", "").strip()
-    result = await client(SearchRequest(q=name, limit=10))
+        name = command.replace("найди", "").strip()
+        result = await client(SearchRequest(q=name, limit=10))
 
     # Фильтруем только личные контакты (не группы, не каналы)
-    users = [user for user in result.users if not user.bot and not user.min]
+        users = [user for user in result.users if not user.bot and not user.min]
 
     if users:
         user = users[0]
