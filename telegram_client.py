@@ -1,8 +1,8 @@
 from telethon import TelegramClient
 
 # Твои данные
-api_id = 16131453
-api_hash = '700e8b63eaa842f1e5ab3c5a811dd3c8'
+api_id = 26131454
+api_hash = '800e8b63eaa842f1e5ab3c5a811dd3c9'
 
 # Создаём клиент — название сессии можешь поменять
 client = TelegramClient('session_jerry', api_id, api_hash)
