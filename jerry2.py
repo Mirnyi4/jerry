@@ -27,9 +27,9 @@ history = []
 latest_sender = None
 latest_chat = None
 
+# Инициализация клиента Telegram с сессией
 client = TelegramClient('session_jerry', API_ID, API_HASH)
 elevenlabs = ElevenLabs(api_key=ELEVEN_API_KEY)
-
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
@@ -40,7 +40,6 @@ def load_config():
         }
     with open(CONFIG_PATH, "r") as f:
         return json.load(f)
-
 
 def speak(text):
     config = load_config()
@@ -55,14 +54,12 @@ def speak(text):
         f.write(b"".join(audio))
     os.system("aplay -D plughw:0,0 -c 1 -f S16_LE -r 24000 output.wav")
 
-
 def record_audio(filename=AUDIO_FILENAME, duration=3):
     subprocess.run(
         ["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-
 
 def transcribe_audio(filename=AUDIO_FILENAME):
     with open(filename, "rb") as f:
@@ -74,7 +71,6 @@ def transcribe_audio(filename=AUDIO_FILENAME):
             tag_audio_events=False
         )
     return transcription.text or ""
-
 
 def ask_grok(prompt):
     config = load_config()
@@ -92,7 +88,6 @@ def ask_grok(prompt):
     history.append({"role": "user", "content": prompt})
     history.append({"role": "assistant", "content": content})
     return content
-
 
 async def telegram_logic(command):
     global latest_sender, latest_chat
@@ -131,10 +126,9 @@ async def telegram_logic(command):
 
     return False
 
-
 async def main_loop():
     global STATE
-    await client.start(phone=PHONE)
+    await client.start(phone=PHONE)  # При первом запуске запросит номер, если нет сессии
     config = load_config()
     WAKE_WORD = config["wake_word"].lower()
     speak("Система активирована. Джерри слушает.")
@@ -180,7 +174,6 @@ async def main_loop():
                     speak("Понял, ухожу в режим ожидания.")
                     STATE = "sleep"
                     break
-
 
 if __name__ == "__main__":
     with client:
