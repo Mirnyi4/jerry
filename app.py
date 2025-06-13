@@ -1,13 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import json
 import os
-import wifi  # модуль wifi.py должен лежать рядом
+import wifi  # wifi.py должен быть рядом
 
 CONFIG_PATH = "config.json"
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # нужно для flash-сообщений
-
+app.secret_key = "your_secret_key"
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
@@ -16,14 +15,12 @@ def load_config():
             "style_prompt": "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений.",
             "voice_id": "Obuyk6KKzg9olSLPaCbl"
         }
-    with open(CONFIG_PATH, "r") as f:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
-
 def save_config(config):
-    with open(CONFIG_PATH, "w") as f:
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -38,9 +35,8 @@ def index():
         return redirect(url_for("index"))
 
     current_connection = wifi.get_current_connection()
-    networks = wifi.scan_networks()
+    networks = wifi.list_networks()
     return render_template("index.html", config=config, current_connection=current_connection, networks=networks)
-
 
 @app.route("/connect", methods=["POST"])
 def connect():
@@ -57,13 +53,11 @@ def connect():
         flash(f"❌ Не удалось подключиться к {ssid}")
     return redirect(url_for("index"))
 
-
 @app.route("/disconnect", methods=["POST"])
 def disconnect():
     wifi.disconnect()
     flash("🔌 Wi-Fi отключён")
     return redirect(url_for("index"))
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
