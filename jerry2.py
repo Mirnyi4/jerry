@@ -94,16 +94,44 @@ async def telegram_logic(command):
     command = command.lower()
 
     if "кто мне написал" in command or "последнее сообщение" in command:
-        dialogs = await client.get_dialogs(limit=1)
-        chat = dialogs[0].entity
-        messages = await client(GetHistoryRequest(peer=chat, limit=1, offset_date=None, offset_id=0, max_id=0, min_id=0, add_offset=0, hash=0))
-        msg = messages.messages[0]
-        sender = await msg.get_sender()
-        latest_sender = sender
-        latest_chat = chat
-        answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
-        commentary = ask_grok(answer)
-        speak(f"{answer}. {commentary}")
+        dialogs = await client.get_dialogs(limit=10)
+        for dialog in dialogs:
+            chat = dialog.entity
+            if not chat or not hasattr(chat, "first_name"):  # Только личные
+                continue
+
+            messages = await client(GetHistoryRequest(
+                peer=chat,
+                limit=1,
+                offset_date=None,
+                offset_id=0,
+                max_id=0,
+                min_id=0,
+                add_offset=0,
+                hash=0
+            ))
+
+            if not messages.messages:
+                continue
+
+            msg = messages.messages[0]
+            sender = await msg.get_sender()
+
+            if not sender:
+                try:
+                    await client.get_entity(msg.from_id)
+                    sender = await msg.get_sender()
+                except:
+                    continue
+
+            latest_sender = sender
+            latest_chat = chat
+            answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
+            commentary = ask_grok(answer)
+            speak(f"{answer}. {commentary}")
+            return True
+
+        speak("Личных сообщений не нашёл.")
         return True
 
     if command.startswith("ответь ему") and latest_sender:
@@ -128,7 +156,7 @@ async def telegram_logic(command):
 
 async def main_loop():
     global STATE
-    await client.start(phone=PHONE)  # При первом запуске запросит номер, если нет сессии
+    await client.start(phone=PHONE)
     config = load_config()
     WAKE_WORD = config["wake_word"].lower()
     speak("Система активирована. Джерри слушает.")
