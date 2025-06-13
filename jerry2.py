@@ -96,43 +96,21 @@ async def telegram_logic(command):
     if "кто мне написал" in command or "последнее сообщение" in command:
         dialogs = await client.get_dialogs(limit=10)
         for dialog in dialogs:
-            chat = dialog.entity
-            if not chat or not hasattr(chat, "first_name"):  # Только личные
-                continue
-
-            messages = await client(GetHistoryRequest(
-                peer=chat,
-                limit=1,
-                offset_date=None,
-                offset_id=0,
-                max_id=0,
-                min_id=0,
-                add_offset=0,
-                hash=0
-            ))
-
-            if not messages.messages:
-                continue
-
-            msg = messages.messages[0]
-            sender = await msg.get_sender()
-
-            if not sender:
-                try:
-                    await client.get_entity(msg.from_id)
+            if dialog.is_user:
+                messages = await client(GetHistoryRequest(
+                    peer=dialog.entity,
+                    limit=1, offset_date=None, offset_id=0,
+                    max_id=0, min_id=0, add_offset=0, hash=0
+                ))
+                if messages.messages:
+                    msg = messages.messages[0]
                     sender = await msg.get_sender()
-                except:
-                    continue
-
-            latest_sender = sender
-            latest_chat = chat
-            answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
-            commentary = ask_grok(answer)
-            speak(f"{answer}. {commentary}")
-            return True
-
-        speak("Личных сообщений не нашёл.")
-        return True
+                    latest_sender = sender
+                    latest_chat = dialog.entity
+                    answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
+                    commentary = ask_grok(answer)
+                    speak(f"{answer}. {commentary}")
+                    return True
 
     if command.startswith("ответь ему") and latest_sender:
         text = command.replace("ответь ему", "").strip()
@@ -140,26 +118,29 @@ async def telegram_logic(command):
         await client.send_message(latest_chat, text)
         return True
 
-    if command.startswith("найди"):
-        name = command.replace("найди", "").strip().lower()
-        contacts = await client.get_contacts()
-        found = None
-
-    for user in contacts:
-        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip().lower()
-        if name in full_name:
-            found = user
-            break
-
-    if found:
-        latest_chat = found
-        speak(f"Нашёл {found.first_name}. Что ему написать?")
-        return True
-    else:
-        speak("Контакт не найден.")
+    if "найди" in command and "чат" not in command:
+        name = command.replace("найди", "").strip()
+        user = await find_contact_by_name(name)
+        if user:
+            latest_chat = user
+            speak(f"Нашёл {user.first_name}. Что ему написать?")
+        else:
+            speak("Не нашёл такого контакта.")
         return True
 
     return False
+
+
+async def find_contact_by_name(name):
+    name = name.lower()
+    dialogs = await client.get_dialogs()
+    for dialog in dialogs:
+        entity = dialog.entity
+        if dialog.is_user and hasattr(entity, 'first_name'):
+            full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip().lower()
+            if name in full_name:
+                return entity
+    return None
 
 async def main_loop():
     global STATE
