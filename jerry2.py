@@ -95,51 +95,62 @@ latest_chat = None
 latest_sender = None
 fuzzy_matches = {}
 awaiting_message = False
+unread_users = {}
 
 async def telegram_logic(command):
-    global latest_chat, latest_sender, fuzzy_matches, awaiting_message
+    global latest_chat, latest_sender, fuzzy_matches, awaiting_message, unread_users
     command = command.lower().strip()
 
-    # Получить последнее входящее сообщение от пользователя
-    if "кто мне написал" in command or "последнее сообщение" in command:
-        dialogs = await client.get_dialogs(limit=20)
+    # 🔔 Кто мне писал?
+    if "непрочитан" in command or "кто мне писал" in command:
+        unread_users = {}
+        dialogs = await client.get_dialogs(limit=30)
+        count = 0
 
         for dialog in dialogs:
             entity = dialog.entity
-            if isinstance(entity, User) and not entity.bot:
-                messages = await client(GetHistoryRequest(
-                    peer=entity,
-                    limit=1, offset_date=None, offset_id=0,
-                    max_id=0, min_id=0, add_offset=0, hash=0
-                ))
+            if not isinstance(entity, User) or entity.bot:
+                continue
 
-                if messages.messages:
-                    msg = messages.messages[0]
-
-                    if isinstance(msg, MessageService) or msg.out:
+            if dialog.unread_count > 0:
+                messages = await client.get_messages(entity, limit=1)
+                if messages:
+                    msg = messages[0]
+                    if isinstance(msg, MessageService):
                         continue
-
                     sender = await msg.get_sender()
-                    if sender and getattr(sender, 'first_name', None):
-                        latest_sender = sender
-                        latest_chat = entity
-                        answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
-                        commentary = ask_grok(answer)
-                        speak(f"{answer}. {commentary}")
-                        return True
+                    if sender and sender.first_name:
+                        unread_users[sender.first_name.lower()] = (entity, msg.message)
+                        count += 1
+                        if count >= 4:
+                            break
 
-        speak("Новых сообщений от людей не найдено.")
+        if unread_users:
+            names = ', '.join(name.capitalize() for name in unread_users.keys())
+            speak(f"У тебя есть сообщение от: {names}. Чьё сообщение прочитать?")
+        else:
+            speak("Нет новых сообщений от людей.")
         return True
 
-    # Ответить последнему отправителю
-    if command.startswith("ответь ему") and latest_sender:
+    # 📖 Прочитать сообщение от выбранного имени
+    if unread_users:
+        for name in unread_users:
+            if name in command:
+                chat, message = unread_users[name]
+                latest_chat = chat
+                speak(f"{name.capitalize()} написала: {message}")
+                unread_users = {}
+                return True
+
+    # 📤 Ответить последнему отправителю
+    if command.startswith("ответь ему") and latest_chat:
         text = command.replace("ответь ему", "").strip()
         speak(f"Ок, пишу: {text}")
         await client.send_message(latest_chat, text)
         awaiting_message = False
         return True
 
-    # Выбор из предложенных похожих имён
+    # 🎯 Выбор из предложенных контактов
     if fuzzy_matches:
         for word, number in {
             "перв": 1, "втор": 2, "трет": 3, "1": 1, "2": 2, "3": 3
@@ -153,7 +164,7 @@ async def telegram_logic(command):
                     speak(f"Хорошо. Что пишем {user.first_name}?")
                     return True
 
-    # Найти контакт по имени
+    # 🔍 Найти контакт по имени
     if "найди" in command and "чат" not in command:
         name = command.replace("найди", "").strip()
         user = await find_contact_by_name(name)
@@ -168,7 +179,7 @@ async def telegram_logic(command):
             speak("Не нашёл такого контакта.")
         return True
 
-    # Написать (если сказано "напиши ...")
+    # ✍️ Написать вручную
     if command.startswith("напиши "):
         text_to_send = command.replace("напиши ", "").strip()
         if latest_chat:
@@ -179,7 +190,7 @@ async def telegram_logic(command):
             speak("Не выбран получатель.")
         return True
 
-    # Любое сообщение — если ждали ввода после "Что пишем?"
+    # 💬 Просто сообщение (если ждали)
     if awaiting_message and latest_chat:
         speak(f"Пишу: {command}")
         await client.send_message(latest_chat, command)
@@ -221,9 +232,7 @@ async def find_contact_by_name(name):
         return None
 
     return None
-
-
-
+    
   # КОНЕЦ СКРИПТА ТЕЛЕГРАММА
 
 async def main_loop():
