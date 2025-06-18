@@ -92,85 +92,130 @@ def ask_grok(prompt):
 
 import difflib
 
+import difflib
+
 latest_chat = None
 latest_sender = None
-pending_similar_contacts = []
+fuzzy_matches = {}
+awaiting_message = False
 
 async def telegram_logic(command):
-    global latest_chat, latest_sender, pending_similar_contacts
-    command_lower = command.lower().strip()
+    global latest_chat, latest_sender, fuzzy_matches, awaiting_message
+    command = command.lower().strip()
 
-    if "найди" in command_lower and "чат" not in command_lower:
-        name = command_lower.replace("найди", "").strip()
-        user = await find_contact_by_name_exact(name)
+    # Получить последнее сообщение
+    if "кто мне написал" in command or "последнее сообщение" in command:
+        dialogs = await client.get_dialogs(limit=10)
+        for dialog in dialogs:
+            if dialog.is_user:
+                messages = await client(GetHistoryRequest(
+                    peer=dialog.entity,
+                    limit=1, offset_date=None, offset_id=0,
+                    max_id=0, min_id=0, add_offset=0, hash=0
+                ))
+                if messages.messages:
+                    msg = messages.messages[0]
+                    sender = await msg.get_sender()
+                    latest_sender = sender
+                    latest_chat = dialog.entity
+                    awaiting_message = False
+                    answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
+                    commentary = ask_grok(answer)
+                    speak(f"{answer}. {commentary}")
+                    return True
+
+    # Ответить последнему отправителю
+    if command.startswith("ответь ему") and latest_sender:
+        text = command.replace("ответь ему", "").strip()
+        speak(f"Ок, пишу: {text}")
+        await client.send_message(latest_chat, text)
+        awaiting_message = False
+        return True
+
+    # Выбор из похожих контактов
+    if fuzzy_matches:
+        for word, number in {
+            "перв": 1, "втор": 2, "трет": 3, "1": 1, "2": 2, "3": 3
+        }.items():
+            if word in command:
+                if number in fuzzy_matches:
+                    user = fuzzy_matches[number]
+                    latest_chat = user
+                    fuzzy_matches = {}
+                    awaiting_message = True
+                    speak(f"Хорошо. Что пишем {user.first_name}?")
+                    return True
+
+    # Найти контакт по имени
+    if "найди" in command and "чат" not in command:
+        name = command.replace("найди", "").strip()
+        user = await find_contact_by_name(name)
         if user:
             latest_chat = user
-            pending_similar_contacts = []
+            awaiting_message = True
             speak(f"Нашёл {user.first_name}. Что ему написать?")
+        elif fuzzy_matches:
+            options = ', '.join([f"{i}. {user.first_name}" for i, user in fuzzy_matches.items()])
+            speak(f"Не нашёл точно, но нашёл: {options}. Скажи номер или имя.")
         else:
-            similar = await find_similar_contacts(name)
-            if similar:
-                pending_similar_contacts = similar
-                text_list = ", ".join(f"{i+1}. {c.first_name}" for i, c in enumerate(similar))
-                speak(f"Не нашёл точно, но нашёл: {text_list}. Скажи номер или имя.")
-            else:
-                speak("Не нашёл такого контакта.")
+            speak("Не нашёл такого контакта.")
         return True
 
-    # Выбор контакта из похожих
-    if pending_similar_contacts:
-        choice = command_lower.strip()
-        # Если сказали номер
-        if choice.isdigit():
-            idx = int(choice) - 1
-            if 0 <= idx < len(pending_similar_contacts):
-                latest_chat = pending_similar_contacts[idx]
-                speak(f"Хорошо. Что пишем {latest_chat.first_name}?")
-                pending_similar_contacts = []
-                return True
-        # Если сказали имя
-        for c in pending_similar_contacts:
-            if c.first_name.lower() in choice:
-                latest_chat = c
-                speak(f"Хорошо. Что пишем {latest_chat.first_name}?")
-                pending_similar_contacts = []
-                return True
-
-        speak("Не понял выбор, скажи номер или имя из списка.")
+    # Написать (если сказано "напиши ...")
+    if command.startswith("напиши "):
+        text_to_send = command.replace("напиши ", "").strip()
+        if latest_chat:
+            speak(f"Пишу: {text_to_send}")
+            await client.send_message(latest_chat, text_to_send)
+            awaiting_message = False
+        else:
+            speak("Не выбран получатель.")
         return True
 
-    # остальная логика (например, "ответь ему", "напиши", "кто мне написал") ...
+    # Любое сообщение — если ждали ввода после "Что пишем?"
+    if awaiting_message and latest_chat:
+        speak(f"Пишу: {command}")
+        await client.send_message(latest_chat, command)
+        awaiting_message = False
+        return True
 
     return False
 
-async def find_contact_by_name_exact(name):
+
+async def find_contact_by_name(name):
+    global fuzzy_matches
     name = name.lower()
+    fuzzy_matches = {}
+
     dialogs = await client.get_dialogs()
+    candidates = []
+    name_map = {}
+
     for dialog in dialogs:
-        if dialog.is_user:
-            entity = dialog.entity
-            full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip().lower()
-            if name == full_name:
-                return entity
+        entity = dialog.entity
+        if dialog.is_user and hasattr(entity, 'first_name'):
+            full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip()
+            key = full_name.lower()
+            name_map[key] = entity
+            candidates.append(key)
+            if getattr(entity, "username", None):
+                uname = entity.username.lower()
+                name_map[uname] = entity
+                candidates.append(uname)
+
+    matches = difflib.get_close_matches(name, candidates, n=3, cutoff=0.5)
+
+    if len(matches) == 1:
+        return name_map[matches[0]]
+
+    elif len(matches) > 1:
+        for i, m in enumerate(matches, 1):
+            fuzzy_matches[i] = name_map[m]
+        return None
+
     return None
 
-async def find_similar_contacts(name):
-    name = name.lower()
-    dialogs = await client.get_dialogs()
-    result = []
-    for dialog in dialogs:
-        if dialog.is_user:
-            entity = dialog.entity
-            full_name = f"{entity.first_name or ''} {entity.last_name or ''}".strip().lower()
-            # Ищем вхождение имени в полном имени контакта
-            if name in full_name or full_name in name:
-                result.append(entity)
-            else:
-                # Можно добавить похожесть по частичному совпадению
-                if any(part in full_name for part in name.split()):
-                    result.append(entity)
-    return result
-
+  # КОНЕЦ СКРИПТА ТЕЛЕГРАММА
 
 async def main_loop():
     global STATE
