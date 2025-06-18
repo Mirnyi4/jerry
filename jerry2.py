@@ -103,22 +103,34 @@ async def telegram_logic(command):
     global latest_chat, latest_sender, fuzzy_matches, awaiting_message
     command = command.lower().strip()
 
-    # Получить последнее сообщение
-    if "кто мне написал" in command or "последнее сообщение" in command:
-        dialogs = await client.get_dialogs(limit=10)
-        for dialog in dialogs:
-            if dialog.is_user:
-                messages = await client(GetHistoryRequest(
-                    peer=dialog.entity,
-                    limit=1, offset_date=None, offset_id=0,
-                    max_id=0, min_id=0, add_offset=0, hash=0
-                ))
-                if messages.messages:
-                    msg = messages.messages[0]
-                    sender = await msg.get_sender()
+    # Внутри telegram_logic:
+if "кто мне написал" in command or "последнее сообщение" in command:
+    dialogs = await client.get_dialogs(limit=20)
+
+    for dialog in dialogs:
+        entity = dialog.entity
+        # Только пользователи, не боты и не группы
+        if isinstance(entity, User) and not entity.bot:
+            messages = await client(GetHistoryRequest(
+                peer=entity,
+                limit=1, offset_date=None, offset_id=0,
+                max_id=0, min_id=0, add_offset=0, hash=0
+            ))
+
+            if messages.messages:
+                msg = messages.messages[0]
+
+                # Игнорировать служебные сообщения типа "пользователь присоединился"
+                if isinstance(msg, MessageService):
+                    continue
+
+                if msg.out:  # Пропускаем свои исходящие сообщения
+                    continue
+
+                sender = await msg.get_sender()
+                if sender and sender.first_name:
                     latest_sender = sender
-                    latest_chat = dialog.entity
-                    awaiting_message = False
+                    latest_chat = entity
                     answer = f"Тебе написал {sender.first_name}, он сказал: {msg.message}"
                     commentary = ask_grok(answer)
                     speak(f"{answer}. {commentary}")
