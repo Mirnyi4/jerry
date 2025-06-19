@@ -9,17 +9,27 @@
         .container { max-width: 600px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; }
         h1 { margin-bottom: 1rem; text-align: center; }
         label { display: block; margin-top: 1rem; font-weight: bold; }
-        select, input[type=text], input[type=password] {
+        select, input[type=text], input[type=password], button {
             width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px; border: none;
             background: #555; color: #eee; font-size: 1rem;
         }
         button {
-            margin-top: 1.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
             background: #4CAF50; color: white; font-size: 1rem; cursor: pointer;
+            margin-top: 1.5rem;
         }
         button:hover { background: #45a049; }
         .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
-        .connected { text-align: center; margin-top: 1rem; color: #4CAF50; font-weight: bold; }
+        .next-button {
+            background: #2196F3;
+            margin-top: 2rem;
+            padding: 0.75rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .next-button:hover {
+            background: #0b7dda;
+        }
     </style>
 </head>
 <body>
@@ -35,24 +45,27 @@
     {% endwith %}
 
     {% if current_connection %}
-      <div class="connected">✅ Уже подключено к сети: <b>{{ current_connection }}</b></div>
+      <p>✅ Уже подключено к сети: <b>{{ current_connection }}</b></p>
+      <form action="{{ url_for('activate_page') }}" method="get">
+          <button type="submit" class="next-button">Перейти дальше</button>
+      </form>
+    {% else %}
+      <form method="POST">
+          <label for="ssid">Выберите сеть:</label>
+          <select id="ssid" name="ssid" required>
+              {% for net in networks %}
+                  <option value="{{ net }}">{{ net }}</option>
+              {% else %}
+                  <option disabled>Нет доступных сетей</option>
+              {% endfor %}
+          </select>
+
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" name="password" required />
+
+          <button type="submit">Подключиться</button>
+      </form>
     {% endif %}
-
-    <form method="POST">
-        <label for="ssid">Выберите сеть:</label>
-        <select id="ssid" name="ssid" required>
-            {% for net in networks %}
-                <option value="{{ net }}">{{ net }}</option>
-            {% else %}
-                <option disabled>Нет доступных сетей</option>
-            {% endfor %}
-        </select>
-
-        <label for="password">Пароль:</label>
-        <input type="password" id="password" name="password" required />
-
-        <button type="submit">Подключиться</button>
-    </form>
 </div>
 </body>
 </html>
