@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import json
 import os
-import wifi  # wifi.py рядом
+import wifi
 
 CONFIG_PATH = "config.json"
+STATE_FILE = "state.json"  # 💥 Должно быть здесь, ДО всех функций
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -12,7 +13,7 @@ def load_config():
     if not os.path.exists(CONFIG_PATH):
         return {
             "wake_word": "привет",
-            "style_prompt": "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то. Избегай длинных объяснений.",
+            "style_prompt": "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то.",
             "voice_id": "Obuyk6KKzg9olSLPaCbl"
         }
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -21,6 +22,22 @@ def load_config():
 def save_config(config):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
+
+def is_first_run():
+    return not os.path.exists(STATE_FILE)
+
+def mark_setup_complete():
+    with open(STATE_FILE, "w") as f:
+        json.dump({"setup": True}, f)
+
+@app.route("/")
+def start():
+    print("🧪 STATE_FILE exists:", os.path.exists(STATE_FILE))
+    if is_first_run():
+        print("👉 Первый запуск! Переходим на интро")
+        return redirect(url_for("intro"))
+    print("✅ Уже настроено, открываем index")
+    return redirect(url_for("index"))
 
 @app.route("/", methods=["GET", "POST"])
 def index():
