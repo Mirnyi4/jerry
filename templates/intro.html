@@ -1,37 +1,79 @@
-
 <!doctype html>
-<html>
+<html lang="ru">
 <head>
-  <title>Привет, я Jerry.py</title>
+  <meta charset="UTF-8" />
+  <title>Приветствие Jerry.py</title>
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: black; }
-    .overlay {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex; justify-content: center; align-items: center;
-      color: white; font-size: 3em; animation: fadeOut 7s ease-in-out;
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       flex-direction: column;
+      overflow: hidden;
     }
-    @keyframes fadeOut {
-      0%, 100% { opacity: 0; }
-      20%, 50% { opacity: 1; }
-      60% { opacity: 0; }
+    video {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
     }
-    .second { animation-delay: 3.5s; }
+    #message {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 1;
+      transition: opacity 1s ease;
+    }
+    #btnNext {
+      display: none;
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+    #btnNext:hover {
+      background-color: #45a049;
+    }
   </style>
-  <script>
-    setTimeout(() => {
-      window.location.href = "/wifi";
-    }, 9000);
-  </script>
 </head>
 <body>
-  <video autoplay muted playsinline style="width:100%; height:100%; object-fit:cover;" onloadeddata="this.muted = false">
-    <source src="/static/ground.mp4" type="video/mp4">
+
+  <video autoplay muted playsinline>
+    <source src="/static/ground.mp4" type="video/mp4" />
   </video>
-  <div class="overlay">
-    <div style="animation-delay: 0s;">Привет</div>
-    <div class="second" style="animation-delay: 3.5s;">Я Jerry.py, сейчас всё настроим...</div>
-  </div>
+
+  <div id="message">Привіт</div>
+  <button id="btnNext" onclick="location.href='/wifi'">Перейти далі</button>
+
+  <script>
+    const message = document.getElementById('message');
+    const btn = document.getElementById('btnNext');
+
+    // Через 4 секунды меняем текст и делаем плавный переход
+    setTimeout(() => {
+      message.style.opacity = 0;
+      setTimeout(() => {
+        message.textContent = 'Я Jerry.py';
+        message.style.opacity = 1;
+      }, 1000);
+    }, 4000);
+
+    // Через ещё 4 секунды скрываем текст и показываем кнопку
+    setTimeout(() => {
+      message.style.opacity = 0;
+      setTimeout(() => {
+        message.style.display = 'none';
+        btn.style.display = 'inline-block';
+      }, 1000);
+    }, 8000);
+  </script>
 </body>
 </html>
