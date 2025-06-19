@@ -14,7 +14,7 @@ def load_config():
     if not os.path.exists(CONFIG_PATH):
         return {
             "wake_word": "привет",
-            "style_prompt": "Отвечай кратко, понятно и как быдло, можешь использовать постоянно юмор какой-то.",
+            "style_prompt": "Ты голосовой помощник Jerry, отвечай кратко и понятно, без длинных обьяснений",
             "voice_id": "Obuyk6KKzg9olSLPaCbl"
         }
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
