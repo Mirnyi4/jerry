@@ -22,15 +22,6 @@ def save_config(config):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
-@app.route("/")
-def start():
-    print("🧪 STATE_FILE exists:", os.path.exists(STATE_FILE))
-    if is_first_run():
-        print("👉 Первый запуск! Переходим на интро")
-        return redirect(url_for("intro"))
-    print("✅ Уже настроено, открываем index")
-    return redirect(url_for("index"))
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     config = load_config()
