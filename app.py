@@ -2,48 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import json
 import os
 import wifi
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from key_utils import is_key_valid  # Импорт функции проверки ключа
 
 CONFIG_PATH = "config.json"
 STATE_FILE = "state.json"
-GOOGLE_KEYFILE = "service_account.json"
-SHEET_NAME = "Jerry KEY"  # Название твоей Google Таблицы
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Заменить на свой секретный ключ
+app.secret_key = "your_secret_key"
 
-
-# === GOOGLE SHEETS ===
-def get_keys_from_google_sheet():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_KEYFILE, scope)
-    client = gspread.authorize(creds)
-    sheet = client.open(SHEET_NAME).sheet1
-    return sheet.get_all_records()
-
-def is_key_valid(entered_key):
-    records = get_keys_from_google_sheet()
-    for row in records:
-        key = str(row.get("Ключ", "")).strip()
-        paid = str(row.get("Оплачен", "")).strip().lower() == "да"
-        date_str = row.get("Дата активации", "")
-        try:
-            activated_at = datetime.strptime(date_str, "%Y-%m-%d") if date_str else None
-        except:
-            activated_at = None
-
-        if key == entered_key:
-            if paid:
-                return True
-            if activated_at and (datetime.now() - activated_at).days <= 30:
-                return True
-            return False
-    return False
-
-
-# === CONFIG ===
 def load_config():
     if not os.path.exists(CONFIG_PATH):
         return {
@@ -58,33 +24,23 @@ def save_config(config):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
+def is_first_run():
+    return not os.path.exists(STATE_FILE)
 
-# === STATE ===
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {}
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_state(state):
+def mark_setup_complete(activation_key):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+        json.dump({"setup": True, "activation_key": activation_key}, f)
 
-def get_activation_key():
-    state = load_state()
-    return state.get("activation_key")
+def get_stored_key():
+    if not os.path.exists(STATE_FILE):
+        return None
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        return data.get("activation_key")
 
-def set_activation_key(key):
-    state = load_state()
-    state["activation_key"] = key
-    save_state(state)
-
-
-# === ROUTES ===
 @app.route("/")
 def start():
-    # Если state.json отсутствует — считаем это первым запуском
-    if not os.path.exists(STATE_FILE):
+    if is_first_run():
         return redirect(url_for("intro"))
     return redirect(url_for("index"))
 
@@ -116,7 +72,7 @@ def activate_page():
     if request.method == "POST":
         key = request.form.get("activation_key", "").strip()
         if is_key_valid(key):
-            set_activation_key(key)
+            mark_setup_complete(key)
             flash("✅ Ключ активации принят!")
             return redirect(url_for("index"))
         else:
@@ -126,9 +82,9 @@ def activate_page():
 
 @app.route("/main", methods=["GET", "POST"])
 def index():
-    key = get_activation_key()
-    if not key or not is_key_valid(key):
-        flash("Ключ активации недействителен. Пожалуйста, активируйтесь.")
+    stored_key = get_stored_key()
+    if not stored_key or not is_key_valid(stored_key):
+        flash("❌ У вас нет доступа, пройдите активацию.")
         return redirect(url_for("activate_page"))
 
     config = load_config()
@@ -140,7 +96,6 @@ def index():
         flash("✅ Настройки сохранены!")
         return redirect(url_for("index"))
     return render_template("index.html", config=config)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
