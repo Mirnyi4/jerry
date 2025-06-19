@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Активация</title>
+<style>
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    background-color: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+  }
+  #container {
+    position: relative;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  #activationVideo {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+    display: none;
+  }
+  #activateBtn {
+    font-size: 1.8rem;
+    padding: 15px 40px;
+    cursor: pointer;
+    border: none;
+    background-color: #4caf50;
+    color: white;
+    border-radius: 8px;
+  }
+  #activatedText {
+    font-size: 2rem;
+    font-weight: bold;
+    display: none;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+  <div id="container">
+    <button id="activateBtn">Запустить видео и активировать</button>
+    <div id="activatedText">Активировано! Ожидайте, запускаю Jerry.py</div>
+  </div>
+
+  <video id="activationVideo" loop muted>
+    <source src="{{ url_for('static', filename='activation_video.mp4') }}" type="video/mp4" />
+    Ваш браузер не поддерживает видео.
+  </video>
+
+<script>
+  const btn = document.getElementById('activateBtn');
+  const video = document.getElementById('activationVideo');
+  const activatedText = document.getElementById('activatedText');
+
+  btn.addEventListener('click', () => {
+    btn.style.display = 'none';               // Скрываем кнопку
+    activatedText.style.display = 'block';    // Показываем текст
+    video.style.display = 'block';             // Показываем видео
+    video.muted = false;                       // Включаем звук
+    video.play();
+
+    // Запускаем скрипт на сервере
+    fetch('/start_jerry3', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log('Запуск jerry3.py:', data.status))
+      .catch(console.error);
+
+    // Через 10 секунд переход на main
+    setTimeout(() => {
+      window.location.href = '/main';
+    }, 10000);
+  });
+</script>
+</body>
+</html>
