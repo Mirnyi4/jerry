@@ -4,7 +4,7 @@ import os
 import wifi
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, timedelta
+from datetime import datetime
 
 CONFIG_PATH = "config.json"
 STATE_FILE = "state.json"
@@ -12,10 +12,10 @@ GOOGLE_KEYFILE = "service_account.json"
 SHEET_NAME = "Jerry KEY"  # Название твоей Google Таблицы
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = "your_secret_key"  # Заменить на свой секретный ключ
+
 
 # === GOOGLE SHEETS ===
-
 def get_keys_from_google_sheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_KEYFILE, scope)
@@ -42,8 +42,8 @@ def is_key_valid(entered_key):
             return False
     return False
 
-# === CONFIG ===
 
+# === CONFIG ===
 def load_config():
     if not os.path.exists(CONFIG_PATH):
         return {
@@ -58,18 +58,33 @@ def save_config(config):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
-def is_first_run():
-    return not os.path.exists(STATE_FILE)
 
-def mark_setup_complete():
-    with open(STATE_FILE, "w") as f:
-        json.dump({"setup": True}, f)
+# === STATE ===
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return {}
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_state(state):
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+
+def get_activation_key():
+    state = load_state()
+    return state.get("activation_key")
+
+def set_activation_key(key):
+    state = load_state()
+    state["activation_key"] = key
+    save_state(state)
+
 
 # === ROUTES ===
-
 @app.route("/")
 def start():
-    if is_first_run():
+    # Если state.json отсутствует — считаем это первым запуском
+    if not os.path.exists(STATE_FILE):
         return redirect(url_for("intro"))
     return redirect(url_for("index"))
 
@@ -101,7 +116,7 @@ def activate_page():
     if request.method == "POST":
         key = request.form.get("activation_key", "").strip()
         if is_key_valid(key):
-            mark_setup_complete()
+            set_activation_key(key)
             flash("✅ Ключ активации принят!")
             return redirect(url_for("index"))
         else:
@@ -111,6 +126,11 @@ def activate_page():
 
 @app.route("/main", methods=["GET", "POST"])
 def index():
+    key = get_activation_key()
+    if not key or not is_key_valid(key):
+        flash("Ключ активации недействителен. Пожалуйста, активируйтесь.")
+        return redirect(url_for("activate_page"))
+
     config = load_config()
     if request.method == "POST":
         config["wake_word"] = request.form.get("wake_word", "").strip()
@@ -120,6 +140,7 @@ def index():
         flash("✅ Настройки сохранены!")
         return redirect(url_for("index"))
     return render_template("index.html", config=config)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
