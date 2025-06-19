@@ -1,79 +1,132 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Приветствие Jerry.py</title>
-  <style>
-    body, html {
-      margin: 0; padding: 0; height: 100%;
-      background: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    video {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: -1;
-    }
-    #message {
-      font-size: 4rem;
-      margin-bottom: 20px;
-      opacity: 1;
-      transition: opacity 1s ease;
-    }
-    #btnNext {
-      display: none;
-      padding: 1rem 2rem;
-      font-size: 1.5rem;
-      background-color: #4CAF50;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      cursor: pointer;
-    }
-    #btnNext:hover {
-      background-color: #45a049;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Интро с видео и анимацией</title>
+<style>
+  /* Сброс и базовые стили */
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    background: black;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+
+  /* Видео на весь экран */
+  #intro-video {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    display: none; /* Скрыто пока не нажата кнопка */
+  }
+
+  /* Центрированная кнопка Начать */
+  #start-btn {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #4CAF50;
+    color: #4CAF50;
+    font-size: 2rem;
+    padding: 1rem 3rem;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  #start-btn:hover {
+    background: #4CAF50;
+    color: black;
+  }
+
+  /* Контейнер текста поверх видео */
+  #text-container {
+    position: fixed;
+    top: 40%;
+    width: 100%;
+    text-align: center;
+    font-size: 3rem;
+    font-weight: bold;
+    pointer-events: none;
+    user-select: none;
+    z-index: 5;
+    opacity: 0;
+  }
+
+  /* Анимация появления текста */
+  .fade-in {
+    animation: fadeInText 1.5s forwards;
+  }
+
+  @keyframes fadeInText {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
 </head>
 <body>
 
-  <video autoplay muted playsinline>
-    <source src="/static/ground.mp4" type="video/mp4" />
-  </video>
+<!-- Видео -->
+<video id="intro-video" preload="auto" playsinline>
+  <source src="ground.mp4" type="video/mp4" />
+  Ваш браузер не поддерживает видео.
+</video>
 
-  <div id="message">Привіт</div>
-  <button id="btnNext" onclick="location.href='/wifi'">Перейти далі</button>
+<!-- Текст с анимацией -->
+<div id="text-container"></div>
 
-  <script>
-    const message = document.getElementById('message');
-    const btn = document.getElementById('btnNext');
+<!-- Кнопка Начать -->
+<button id="start-btn">Начать</button>
 
-    // Через 4 секунды меняем текст и делаем плавный переход
-    setTimeout(() => {
-      message.style.opacity = 0;
+<script>
+  const startBtn = document.getElementById('start-btn');
+  const video = document.getElementById('intro-video');
+  const textContainer = document.getElementById('text-container');
+
+  // Последовательность текстов с задержками (мс)
+  const texts = [
+    { text: "Привет", delay: 0 },
+    { text: "я Jerry.py", delay: 2000 },
+    { text: "Сейчас мы всё настроим", delay: 4000 }
+  ];
+
+  function showTextSequence() {
+    texts.forEach(({text, delay}, index) => {
       setTimeout(() => {
-        message.textContent = 'Я Jerry.py';
-        message.style.opacity = 1;
-      }, 1000);
-    }, 4000);
+        textContainer.textContent = text;
+        textContainer.classList.remove('fade-in');
+        // Перезапускаем анимацию
+        void textContainer.offsetWidth;
+        textContainer.classList.add('fade-in');
 
-    // Через ещё 4 секунды скрываем текст и показываем кнопку
-    setTimeout(() => {
-      message.style.opacity = 0;
-      setTimeout(() => {
-        message.style.display = 'none';
-        btn.style.display = 'inline-block';
-      }, 1000);
-    }, 8000);
-  </script>
+        // После последнего текста можно что-то сделать (например, открыть следующий этап)
+        if(index === texts.length -1){
+          // Здесь, например, можно показывать форму или переходить дальше
+          // console.log('Анимация закончена');
+        }
+      }, delay);
+    });
+  }
+
+  startBtn.addEventListener('click', () => {
+    // Скрываем кнопку
+    startBtn.style.display = 'none';
+
+    // Показываем видео и включаем звук
+    video.style.display = 'block';
+    video.muted = false;
+    video.play();
+
+    // Запускаем анимацию текста
+    showTextSequence();
+  });
+</script>
+
 </body>
 </html>
