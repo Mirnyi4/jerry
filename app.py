@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import json
 import os
 import wifi
+import subprocess
 from key_utils import is_key_valid  # Импорт функции проверки ключа
 
 CONFIG_PATH = "config.json"
@@ -74,11 +75,21 @@ def activate_page():
         if is_key_valid(key):
             mark_setup_complete(key)
             flash("✅ Ключ активации принят!")
-            return redirect(url_for("index"))
+            return redirect(url_for("activated"))
         else:
             flash("❌ Неверный ключ или срок действия истёк!")
             return redirect(url_for("activate_page"))
     return render_template("activation.html")
+
+@app.route("/activated")
+def activated():
+    return render_template("activated.html")
+
+@app.route("/start_jerry3", methods=["POST"])
+def start_jerry3():
+    # Запуск jerry3.py асинхронно
+    subprocess.Popen(["python3", "jerry3.py"])
+    return jsonify({"status": "started"})
 
 @app.route("/main", methods=["GET", "POST"])
 def index():
