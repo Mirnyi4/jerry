@@ -1,13 +1,48 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import json
 import os
-import wifi  # твой модуль wifi.py с функциями подключения
+import wifi
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime, timedelta
 
 CONFIG_PATH = "config.json"
 STATE_FILE = "state.json"
+GOOGLE_KEYFILE = "service_account.json"
+SHEET_NAME = "Jerry KEY"  # Название твоей Google Таблицы
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
+
+# === GOOGLE SHEETS ===
+
+def get_keys_from_google_sheet():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_KEYFILE, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open(SHEET_NAME).sheet1
+    return sheet.get_all_records()
+
+def is_key_valid(entered_key):
+    records = get_keys_from_google_sheet()
+    for row in records:
+        key = str(row.get("Ключ", "")).strip()
+        paid = str(row.get("Оплачен", "")).strip().lower() == "да"
+        date_str = row.get("Дата активации", "")
+        try:
+            activated_at = datetime.strptime(date_str, "%Y-%m-%d") if date_str else None
+        except:
+            activated_at = None
+
+        if key == entered_key:
+            if paid:
+                return True
+            if activated_at and (datetime.now() - activated_at).days <= 30:
+                return True
+            return False
+    return False
+
+# === CONFIG ===
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
@@ -30,6 +65,8 @@ def mark_setup_complete():
     with open(STATE_FILE, "w") as f:
         json.dump({"setup": True}, f)
 
+# === ROUTES ===
+
 @app.route("/")
 def start():
     if is_first_run():
@@ -38,7 +75,6 @@ def start():
 
 @app.route("/intro")
 def intro():
-    # Страница с видео и приветствием
     return render_template("intro.html")
 
 @app.route("/wifi", methods=["GET", "POST"])
@@ -64,13 +100,12 @@ def setup_wifi():
 def activate_page():
     if request.method == "POST":
         key = request.form.get("activation_key", "").strip()
-        # Пока простой заглушка для проверки ключа
-        if key == "правильный_ключ":
+        if is_key_valid(key):
             mark_setup_complete()
-            flash("✅ Активация прошла успешно!")
+            flash("✅ Ключ активации принят!")
             return redirect(url_for("index"))
         else:
-            flash("❌ Неверный ключ активации!")
+            flash("❌ Неверный ключ или срок действия истёк!")
             return redirect(url_for("activate_page"))
     return render_template("activation.html")
 
