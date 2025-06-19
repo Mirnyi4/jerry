@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Настройки Джерри и Wi-Fi</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #eee; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; }
+        h1 { margin-bottom: 1rem; text-align: center; }
+        label { display: block; margin-top: 1rem; font-weight: bold; }
+        input[type=text], textarea, select, input[type=password] {
+            width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px; border: none;
+            background: #555; color: #eee; font-size: 1rem;
+        }
+        button {
+            margin-top: 1.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
+            background: #4CAF50; color: white; font-size: 1rem; cursor: pointer;
+        }
+        button:hover { background: #45a049; }
+        .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .wifi-section { margin-top: 2rem; }
+        .network-list { margin-top: 1rem; max-height: 150px; overflow-y: auto; background: #222; padding: 0.5rem; border-radius: 4px; }
+        .network-item { padding: 0.3rem 0; border-bottom: 1px solid #444; }
+        .current-connection { font-weight: bold; color: #4CAF50; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Настройки Джерри и Wi-Fi</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('index') }}">
+        <label for="wake_word">Ключевое слово для активации:</label>
+        <input type="text" id="wake_word" name="wake_word" value="{{ config.wake_word }}" required />
+
+        <label for="style_prompt">Стиль общения (промт):</label>
+        <textarea id="style_prompt" name="style_prompt" rows="4" required>{{ config.style_prompt }}</textarea>
+
+        <label for="voice_id">Голос:</label>
+        <select id="voice_id" name="voice_id" required>
+            <option value="Obuyk6KKzg9olSLPaCbl" {% if config.voice_id == 'Obuyk6KKzg9olSLPaCbl' %}selected{% endif %}>Аркадий</option>
+            <option value="gedzfqL7OGdPbwm0ynTP" {% if config.voice_id == 'gedzfqL7OGdPbwm0ynTP' %}selected{% endif %}>Надя</option>
+            <option value="pvY1pikBdoI4SB62vEVo" {% if config.voice_id == 'pvY1pikBdoI4SB62vEVo' %}selected{% endif %}>Андрей</option>
+            <option value="ymDCYd8puC7gYjxIamPt" {% if config.voice_id == 'ymDCYd8puC7gYjxIamPt' %}selected{% endif %}>Тетя Зина</option>
+        </select>
+
+        <button type="submit">Сохранить настройки</button>
+    </form>
+
+    <div class="wifi-section">
+        <h2>Wi-Fi сети</h2>
+        <p>Текущая сеть: 
+          {% if current_connection %}
+            <span class="current-connection">{{ current_connection }}</span>
+          {% else %}
+            Нет подключения
+          {% endif %}
+        </p>
+
+        <div class="network-list">
+            {% for net in networks %}
+                <div class="network-item">{{ net }}</div>
+            {% else %}
+                <div>Нет доступных сетей</div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" action="{{ url_for('connect') }}" style="margin-top: 1rem;">
+            <label for="ssid">SSID:</label>
+            <input type="text" id="ssid" name="ssid" required />
+
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required />
+
+            <button type="submit">Подключиться</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('disconnect') }}" style="margin-top: 1rem;">
+            <button type="submit" style="background:#e74c3c;">Отключиться от Wi-Fi</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
