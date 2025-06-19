@@ -8,19 +8,25 @@ def list_networks():
     except subprocess.CalledProcessError:
         return []
 
+def get_current_connection():
+    try:
+        ssid = subprocess.check_output(["iwgetid", "-r"], text=True).strip()
+        return ssid if ssid else None
+    except Exception:
+        return None
+
 def connect_to_network(ssid, password):
     try:
-        # Проверка: уже подключены?
         current = get_current_connection()
         if current == ssid:
             with open("wifi_log.txt", "w") as f:
                 f.write(f"✅ Уже подключены к {ssid}")
             return True
 
-        # Удаляем старое соединение
+        # Удаляем старое соединение с таким именем (если есть)
         subprocess.run(["nmcli", "con", "delete", ssid], stderr=subprocess.DEVNULL)
 
-        # Подключаемся
+        # Подключаемся к Wi-Fi
         result = subprocess.run(
             ["nmcli", "dev", "wifi", "connect", ssid, "password", password],
             capture_output=True,
@@ -30,7 +36,7 @@ def connect_to_network(ssid, password):
         with open("wifi_log.txt", "w") as f:
             f.write("STDOUT:\n" + result.stdout + "\n\nSTDERR:\n" + result.stderr)
 
-        # Проверка, подключены ли после попытки
+        # Проверяем, подключились ли мы
         if "successfully activated" in result.stdout.lower() or get_current_connection() == ssid:
             return True
 
@@ -40,16 +46,6 @@ def connect_to_network(ssid, password):
         with open("wifi_log.txt", "w") as f:
             f.write("❌ Exception: " + str(e))
         return False
-
-def get_current_connection():
-    try:
-        result = subprocess.check_output(["nmcli", "-t", "-f", "ACTIVE,SSID", "con", "show", "--active"], text=True)
-        for line in result.strip().split("\n"):
-            if line.startswith("yes:"):
-                return line.split(":")[1]
-    except subprocess.CalledProcessError:
-        pass
-    return None
 
 def disconnect():
     current = get_current_connection()
