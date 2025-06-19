@@ -72,7 +72,7 @@ def activate_page():
         else:
             flash("❌ Неверный ключ активации!")
             return redirect(url_for("activate_page"))
-    return render_template("activate.html")
+    return render_template("activation.html")
 
 @app.route("/main", methods=["GET", "POST"])
 def index():
