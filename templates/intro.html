@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Интро с видео и анимацией</title>
 <style>
-  /* Сброс и базовые стили */
   body, html {
     margin: 0; padding: 0; height: 100%;
     background: black;
@@ -14,19 +13,16 @@
     color: white;
   }
 
-  /* Видео на весь экран */
   #intro-video {
     position: fixed;
     top: 0; left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     object-fit: cover;
     z-index: 0;
-    display: none; /* Скрыто пока не нажата кнопка */
+    display: none;
   }
 
-  /* Центрированная кнопка Начать */
-  #start-btn {
+  #start-btn, #continue-btn {
     position: fixed;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -40,12 +36,17 @@
     z-index: 10;
     transition: background-color 0.3s, color 0.3s;
   }
-  #start-btn:hover {
+
+  #start-btn:hover, #continue-btn:hover {
     background: #4CAF50;
     color: black;
   }
 
-  /* Контейнер текста поверх видео */
+  #continue-btn {
+    display: none;
+    top: 70%;
+  }
+
   #text-container {
     position: fixed;
     top: 40%;
@@ -59,7 +60,6 @@
     opacity: 0;
   }
 
-  /* Анимация появления текста */
   .fade-in {
     animation: fadeInText 1.5s forwards;
   }
@@ -72,24 +72,22 @@
 </head>
 <body>
 
-<!-- Видео -->
 <video id="intro-video" preload="auto" playsinline>
-  <source src="ground.mp4" type="video/mp4" />
+  <source src="{{ url_for('static', filename='ground.mp4') }}" type="video/mp4" />
   Ваш браузер не поддерживает видео.
 </video>
 
-<!-- Текст с анимацией -->
 <div id="text-container"></div>
 
-<!-- Кнопка Начать -->
 <button id="start-btn">Начать</button>
+<button id="continue-btn">Продолжить</button>
 
 <script>
   const startBtn = document.getElementById('start-btn');
+  const continueBtn = document.getElementById('continue-btn');
   const video = document.getElementById('intro-video');
   const textContainer = document.getElementById('text-container');
 
-  // Последовательность текстов с задержками (мс)
   const texts = [
     { text: "Привет", delay: 0 },
     { text: "я Jerry.py", delay: 2000 },
@@ -101,31 +99,31 @@
       setTimeout(() => {
         textContainer.textContent = text;
         textContainer.classList.remove('fade-in');
-        // Перезапускаем анимацию
         void textContainer.offsetWidth;
         textContainer.classList.add('fade-in');
 
-        // После последнего текста можно что-то сделать (например, открыть следующий этап)
-        if(index === texts.length -1){
-          // Здесь, например, можно показывать форму или переходить дальше
-          // console.log('Анимация закончена');
+        if (index === texts.length - 1) {
+          // Показываем кнопку "Продолжить" спустя 1.7 сек после последнего текста
+          setTimeout(() => {
+            continueBtn.style.display = 'block';
+          }, 1700);
         }
       }, delay);
     });
   }
 
-  startBtn.addEventListener('click', () => {
-    // Скрываем кнопку
+  startBtn.onclick = () => {
     startBtn.style.display = 'none';
-
-    // Показываем видео и включаем звук
     video.style.display = 'block';
     video.muted = false;
     video.play();
-
-    // Запускаем анимацию текста
     showTextSequence();
-  });
+  };
+
+  continueBtn.onclick = () => {
+    // Например, редирект на страницу настроек:
+    window.location.href = "/";
+  };
 </script>
 
 </body>
