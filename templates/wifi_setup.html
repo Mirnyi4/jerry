@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -20,6 +19,7 @@
         }
         button:hover { background: #45a049; }
         .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .connected { text-align: center; margin-top: 1rem; color: #4CAF50; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -33,6 +33,10 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
+
+    {% if current_connection %}
+      <div class="connected">✅ Уже подключено к сети: <b>{{ current_connection }}</b></div>
+    {% endif %}
 
     <form method="POST">
         <label for="ssid">Выберите сеть:</label>
