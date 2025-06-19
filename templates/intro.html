@@ -4,12 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Интро с видео и анимацией</title>
+<!-- Добавляем шрифт Roboto -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
   body, html {
     margin: 0; padding: 0; height: 100%;
     background: black;
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', Arial, sans-serif;
     color: white;
   }
 
@@ -35,6 +37,7 @@
     cursor: pointer;
     z-index: 10;
     transition: background-color 0.3s, color 0.3s;
+    font-weight: 700;
   }
 
   #start-btn:hover, #continue-btn:hover {
@@ -53,7 +56,7 @@
     width: 100%;
     text-align: center;
     font-size: 3rem;
-    font-weight: bold;
+    font-weight: 700;
     pointer-events: none;
     user-select: none;
     z-index: 5;
@@ -64,9 +67,18 @@
     animation: fadeInText 1.5s forwards;
   }
 
+  .fade-out {
+    animation: fadeOutText 1.5s forwards;
+  }
+
   @keyframes fadeInText {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOutText {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
   }
 </style>
 </head>
@@ -98,15 +110,21 @@
     texts.forEach(({text, delay}, index) => {
       setTimeout(() => {
         textContainer.textContent = text;
-        textContainer.classList.remove('fade-in');
-        void textContainer.offsetWidth;
+        textContainer.classList.remove('fade-in', 'fade-out');
+        void textContainer.offsetWidth; // перезапуск анимации
         textContainer.classList.add('fade-in');
 
         if (index === texts.length - 1) {
-          // Показываем кнопку "Продолжить" спустя 1.7 сек после последнего текста
+          // Через 5 секунд после появления текста — начинаем его скрывать
+          setTimeout(() => {
+            textContainer.classList.remove('fade-in');
+            textContainer.classList.add('fade-out');
+          }, 5000);
+
+          // Через 9 секунд после появления текста — показать кнопку
           setTimeout(() => {
             continueBtn.style.display = 'block';
-          }, 1700);
+          }, 9000);
         }
       }, delay);
     });
@@ -121,7 +139,6 @@
   };
 
   continueBtn.onclick = () => {
-    // Например, редирект на страницу настроек:
     window.location.href = "/";
   };
 </script>
