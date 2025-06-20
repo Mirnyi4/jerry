@@ -120,15 +120,10 @@
             textContainer.classList.add('fade-out');
           }, 5000);
 
-          // Через 9 секунд после появления текста — показать кнопку
-          setTimeout(() => {
-            continueBtn.style.display = 'block';
-          }, 9000);
-
           // Автоматический переход через 10 секунд после появления последнего текста
           setTimeout(() => {
             window.location.href = "/main";
-          }, 10000);
+          }, 5000);
         }
       }, delay);
     });
