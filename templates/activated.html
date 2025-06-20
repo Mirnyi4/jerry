@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Интро с видео и анимацией</title>
-<!-- Добавляем шрифт Roboto -->
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
   body, html {
@@ -14,7 +13,6 @@
     font-family: 'Roboto', Arial, sans-serif;
     color: white;
   }
-
   #intro-video {
     position: fixed;
     top: 0; left: 0;
@@ -23,8 +21,7 @@
     z-index: 0;
     display: none;
   }
-
-  #start-btn, #continue-btn {
+  #start-btn {
     position: fixed;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -39,17 +36,10 @@
     transition: background-color 0.3s, color 0.3s;
     font-weight: 700;
   }
-
-  #start-btn:hover, #continue-btn:hover {
+  #start-btn:hover {
     background: #4CAF50;
     color: black;
   }
-
-  #continue-btn {
-    display: none;
-    top: 70%;
-  }
-
   #text-container {
     position: fixed;
     top: 40%;
@@ -62,20 +52,16 @@
     z-index: 5;
     opacity: 0;
   }
-
   .fade-in {
     animation: fadeInText 1.5s forwards;
   }
-
   .fade-out {
     animation: fadeOutText 1.5s forwards;
   }
-
   @keyframes fadeInText {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
   @keyframes fadeOutText {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(-20px); }
@@ -95,7 +81,6 @@
 
 <script>
   const startBtn = document.getElementById('start-btn');
-  const continueBtn = document.getElementById('continue-btn');
   const video = document.getElementById('intro-video');
   const textContainer = document.getElementById('text-container');
 
@@ -110,35 +95,41 @@
       setTimeout(() => {
         textContainer.textContent = text;
         textContainer.classList.remove('fade-in', 'fade-out');
-        void textContainer.offsetWidth; // перезапуск анимации
+        void textContainer.offsetWidth;
         textContainer.classList.add('fade-in');
 
         if (index === texts.length - 1) {
-          // Через 5 секунд после появления текста — начинаем его скрывать
           setTimeout(() => {
             textContainer.classList.remove('fade-in');
             textContainer.classList.add('fade-out');
-          }, 5000);
-
-          // Автоматический переход через 10 секунд после появления последнего текста
-          setTimeout(() => {
-            window.location.href = "/main";
           }, 5000);
         }
       }, delay);
     });
   }
 
-  startBtn.onclick = () => {
+  startBtn.onclick = async () => {
     startBtn.style.display = 'none';
     video.style.display = 'block';
     video.muted = false;
     video.play();
     showTextSequence();
-  };
 
-  // Кнопка больше не нужна, можно скрыть или убрать обработчик
-  continueBtn.onclick = null;
+    try {
+      const response = await fetch('/start_jerry3', { method: 'POST' });
+      if (response.ok) {
+        setTimeout(() => {
+          window.location.href = "/main";
+        }, 5000);
+      } else {
+        alert('Ошибка запуска скрипта на сервере');
+        startBtn.style.display = 'block';
+      }
+    } catch (e) {
+      alert('Ошибка сети или сервера');
+      startBtn.style.display = 'block';
+    }
+  };
 </script>
 
 </body>
