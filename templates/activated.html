@@ -85,14 +85,13 @@
 <body>
 
 <video id="intro-video" preload="auto" playsinline>
-  <source src="{{ url_for('static', filename='ground.mp4') }}" type="video/mp4" />
+  <source src="{{ url_for('static', filename='activation_video.mp4') }}" type="video/mp4" />
   Ваш браузер не поддерживает видео.
 </video>
 
 <div id="text-container"></div>
 
-<button id="start-btn">Почати</button>
-<button id="continue-btn">Продовжити</button>
+<button id="start-btn">Перший запуск</button>
 
 <script>
   const startBtn = document.getElementById('start-btn');
