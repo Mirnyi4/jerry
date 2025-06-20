@@ -1,82 +1,83 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Активация</title>
-<style>
-  body, html {
-    margin: 0; padding: 0; height: 100%;
-    background-color: #000;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    overflow: hidden;
-  }
-  #container {
-    position: relative;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    z-index: 2;
-  }
-  #activationVideo {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    object-fit: cover;
-    z-index: -1;
-    display: none;
-  }
-  #activateBtn {
-    font-size: 1.8rem;
-    padding: 15px 40px;
-    cursor: pointer;
-    border: none;
-    background-color: #4caf50;
-    color: white;
-    border-radius: 8px;
-  }
-  .typewriter {
-    font-size: 2rem;
-    white-space: nowrap;
-    border-right: 2px solid #fff;
-    overflow: hidden;
-    width: 0;
-    animation: typing 2s steps(30, end) forwards, blink .7s step-end infinite;
-    margin-top: 20px;
-  }
+  <meta charset="UTF-8" />
+  <title>Активация</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
 
-  .delay-2s {
-    animation-delay: 2s;
-  }
+    #activationVideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -1;
+      display: none;
+    }
 
-  @keyframes typing {
-    from { width: 0; }
-    to { width: 100%; }
-  }
+    #activateBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.8rem;
+      padding: 15px 40px;
+      cursor: pointer;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 8px;
+      z-index: 10;
+    }
 
-  @keyframes blink {
-    50% { border-color: transparent; }
-  }
-</style>
+    #text-container {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 1.5s ease, transform 1.5s ease;
+      z-index: 5;
+    }
+
+    .fade-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hidden {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  </style>
 </head>
 <body>
-  <div id="container">
-    <button id="activateBtn">Запустити систему</button>
-    <div id="text1" class="typewriter" style="display:none;">✅ Активовано!</div>
-    <div id="text2" class="typewriter delay-2s" style="display:none;">🚀 Запускаю Jerry.ua</div>
-  </div>
 
-  <video id="activationVideo">
-    <source src="{{ url_for('static', filename='activation_video.mp4') }}" type="video/mp4" />
-    Ваш браузер не поддерживает видео.
-  </video>
+<video id="activationVideo" playsinline preload="auto" loop>
+  <source src="{{ url_for('static', filename='activation_video.mp4') }}" type="video/mp4" />
+  Ваш браузер не поддерживает видео.
+</video>
+
+<div id="text-container" class="hidden">Активировано!</div>
+<button id="activateBtn">Запустить видео и активировать</button>
 
 <script>
   const btn = document.getElementById('activateBtn');
   const video = document.getElementById('activationVideo');
-  const text1 = document.getElementById('text1');
-  const text2 = document.getElementById('text2');
+  const text = document.getElementById('text-container');
 
   btn.addEventListener('click', () => {
     btn.style.display = 'none';
@@ -84,21 +85,34 @@
     video.muted = false;
     video.play();
 
-    text1.style.display = 'block';
+    // Плавное появление "Активировано!"
+    text.textContent = "Активировано!";
+    text.classList.remove("hidden");
+    text.classList.add("fade-in");
 
+    // Через 2.5 секунды — меняем текст на "Запускаю Jerry.py"
     setTimeout(() => {
-      text2.style.display = 'block';
-    }, 2000);
+      text.classList.remove("fade-in");
+      text.classList.add("hidden");
+      setTimeout(() => {
+        text.textContent = "Запускаю Jerry.py";
+        text.classList.remove("hidden");
+        text.classList.add("fade-in");
+      }, 1000);
+    }, 2500);
 
+    // Отправка на сервер
     fetch('/start_jerry3', { method: 'POST' })
       .then(res => res.json())
-      .then(data => console.log('Запуск jerry3.py:', data.status))
+      .then(data => console.log("🎬 Jerry запущен:", data.status))
       .catch(console.error);
 
+    // Через 10 секунд переход на main
     setTimeout(() => {
       window.location.href = '/main';
     }, 10000);
   });
 </script>
+
 </body>
 </html>
