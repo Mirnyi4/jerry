@@ -1,117 +1,150 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Активация</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background-color: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Интро с видео и анимацией</title>
+<!-- Добавляем шрифт Roboto -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    background: black;
+    overflow: hidden;
+    font-family: 'Roboto', Arial, sans-serif;
+    color: white;
+  }
 
-    #activationVideo {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: -1;
-      display: none;
-    }
+  #intro-video {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    display: none;
+  }
 
-    #activateBtn {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 1.8rem;
-      padding: 15px 40px;
-      cursor: pointer;
-      border: none;
-      background-color: #4caf50;
-      color: white;
-      border-radius: 8px;
-      z-index: 10;
-    }
+  #start-btn, #continue-btn {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #4CAF50;
+    color: #4CAF50;
+    font-size: 2rem;
+    padding: 1rem 3rem;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s, color 0.3s;
+    font-weight: 700;
+  }
 
-    #text-container {
-      position: absolute;
-      top: 40%;
-      width: 100%;
-      text-align: center;
-      font-size: 2.5rem;
-      font-weight: bold;
-      opacity: 0;
-      transition: opacity 1.5s ease, transform 1.5s ease;
-      z-index: 5;
-    }
+  #start-btn:hover, #continue-btn:hover {
+    background: #4CAF50;
+    color: black;
+  }
 
-    .fade-in {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  #continue-btn {
+    display: none;
+    top: 70%;
+  }
 
-    .hidden {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-  </style>
+  #text-container {
+    position: fixed;
+    top: 40%;
+    width: 100%;
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 700;
+    pointer-events: none;
+    user-select: none;
+    z-index: 5;
+    opacity: 0;
+  }
+
+  .fade-in {
+    animation: fadeInText 1.5s forwards;
+  }
+
+  .fade-out {
+    animation: fadeOutText 1.5s forwards;
+  }
+
+  @keyframes fadeInText {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOutText {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+  }
+</style>
 </head>
 <body>
 
-<video id="activationVideo" playsinline preload="auto" loop>
-  <source src="{{ url_for('static', filename='activation_video.mp4') }}" type="video/mp4" />
+<video id="intro-video" preload="auto" playsinline>
+  <source src="{{ url_for('static', filename='ground.mp4') }}" type="video/mp4" />
   Ваш браузер не поддерживает видео.
 </video>
 
-<div id="text-container" class="hidden">Активировано!</div>
-<button id="activateBtn">Запустити</button>
+<div id="text-container"></div>
+
+<button id="start-btn">Почати</button>
+<button id="continue-btn">Продовжити</button>
 
 <script>
-  const btn = document.getElementById('activateBtn');
-  const video = document.getElementById('activationVideo');
-  const text = document.getElementById('text-container');
+  const startBtn = document.getElementById('start-btn');
+  const continueBtn = document.getElementById('continue-btn');
+  const video = document.getElementById('intro-video');
+  const textContainer = document.getElementById('text-container');
 
-  btn.addEventListener('click', () => {
-    btn.style.display = 'none';
+  const texts = [
+    { text: "Активовано!", delay: 0 },
+    { text: "Приємного користування", delay: 2000 },
+    { text: "Запускаю Jerry.ua", delay: 4000 }
+  ];
+
+  function showTextSequence() {
+    texts.forEach(({text, delay}, index) => {
+      setTimeout(() => {
+        textContainer.textContent = text;
+        textContainer.classList.remove('fade-in', 'fade-out');
+        void textContainer.offsetWidth; // перезапуск анимации
+        textContainer.classList.add('fade-in');
+
+        if (index === texts.length - 1) {
+          // Через 5 секунд после появления текста — начинаем его скрывать
+          setTimeout(() => {
+            textContainer.classList.remove('fade-in');
+            textContainer.classList.add('fade-out');
+          }, 5000);
+
+          // Через 9 секунд после появления текста — показать кнопку
+          setTimeout(() => {
+            continueBtn.style.display = 'block';
+          }, 9000);
+
+          // Автоматический переход через 10 секунд после появления последнего текста
+          setTimeout(() => {
+            window.location.href = "/main";
+          }, 10000);
+        }
+      }, delay);
+    });
+  }
+
+  startBtn.onclick = () => {
+    startBtn.style.display = 'none';
     video.style.display = 'block';
     video.muted = false;
     video.play();
+    showTextSequence();
+  };
 
-    // Плавное появление "Активировано!"
-    text.textContent = "Активировано!";
-    text.classList.remove("hidden");
-    text.classList.add("fade-in");
-
-    // Через 2.5 секунды — меняем текст на "Запускаю Jerry.py"
-    setTimeout(() => {
-      text.classList.remove("fade-in");
-      text.classList.add("hidden");
-      setTimeout(() => {
-        text.textContent = "Запускаю Jerry.py";
-        text.classList.remove("hidden");
-        text.classList.add("fade-in");
-      }, 1000);
-    }, 2500);
-
-    // Отправка на сервер
-    fetch('/start_jerry3', { method: 'POST' })
-      .then(res => res.json())
-      .then(data => console.log("🎬 Jerry запущен:", data.status))
-      .catch(console.error);
-
-    // Через 10 секунд переход на main
-    setTimeout(() => {
-      window.location.href = '/main';
-    }, 10000);
-  });
+  // Кнопка больше не нужна, можно скрыть или убрать обработчик
+  continueBtn.onclick = null;
 </script>
 
 </body>
