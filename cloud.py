@@ -10,9 +10,21 @@ def search_track(query):
         'client_id': CLIENT_ID,
         'limit': 1
     }
-    r = requests.get(url, params=params)
-    data = r.json()
-    return data['collection'][0] if data['collection'] else None
+
+    try:
+        r = requests.get(url, params=params)
+        if r.status_code != 200:
+            print(f"❌ Ошибка запроса: {r.status_code} — {r.text}")
+            return None
+        data = r.json()
+        if 'collection' not in data or not data['collection']:
+            print("⚠️ Трек не найден или пустой ответ.")
+            return None
+        return data['collection'][0]
+    except Exception as e:
+        print(f"❌ Ошибка при поиске: {e}")
+        return None
+
 
 def get_real_stream_url(track):
     for transcoding in track['media']['transcodings']:
