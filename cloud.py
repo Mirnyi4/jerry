@@ -29,3 +29,5 @@ def play_track_by_name(name):
         "--audio-device=alsa/plughw:0,0",
         stream_url
     ])
+
+play_track_by_name("Linkin Park In The End")
