@@ -22,7 +22,7 @@ def play_track_by_name(name):
     if not track:
         print("❌ Не найдено.")
         return
-    print(f"▶ Воспроизвожу: {track['title']}")
+    print(f"▶ Воспроизвожу: {track['title']} — {track['user']['username']}")
     stream_url = get_stream_url(track['id'])
     subprocess.Popen([
         "mpv", "--no-video",
@@ -30,4 +30,16 @@ def play_track_by_name(name):
         stream_url
     ])
 
-play_track_by_name("Linkin Park In The End")
+# 🔁 Цикл ожидания команд из консоли
+def main():
+    print("🎧 Введи название трека для воспроизведения (или 'выход'):")
+    while True:
+        query = input(">>> ").strip()
+        if query.lower() in ['выход', 'exit', 'quit']:
+            print("🚪 Выход.")
+            break
+        if query:
+            play_track_by_name(query)
+
+if __name__ == "__main__":
+    main()
