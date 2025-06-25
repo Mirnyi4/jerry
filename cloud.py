@@ -11,9 +11,13 @@ def search_youtube(query):
         'key': API_KEY,
         'maxResults': 1,
         'type': 'video',
-        'videoCategoryId': '',  # можно указать, если нужно
     }
     response = requests.get(search_url, params=params)
+    print("DEBUG: status_code =", response.status_code)
+    print("DEBUG: response =", response.text)
+    if response.status_code != 200:
+        print("❌ Ошибка API:", response.status_code)
+        return None
     data = response.json()
     items = data.get('items')
     if not items:
@@ -21,6 +25,7 @@ def search_youtube(query):
     video_id = items[0]['id']['videoId']
     title = items[0]['snippet']['title']
     return video_id, title
+
 
 def play_youtube_video(video_id, title):
     url = f"https://www.youtube.com/watch?v={video_id}"
