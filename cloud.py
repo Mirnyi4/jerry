@@ -16,11 +16,18 @@ def search_track(query):
 
 def get_real_stream_url(track):
     for transcoding in track['media']['transcodings']:
-        if 'progressive' in transcoding['format']['protocol']:
-            url = transcoding['url']
+        protocol = transcoding['format']['protocol']
+        url = transcoding['url']
+        try:
             r = requests.get(url, params={'client_id': CLIENT_ID})
             stream_info = r.json()
-            return stream_info['url']
+            if 'url' in stream_info:
+                print(f"🎵 Использую поток ({protocol}): {stream_info['url']}")
+                return stream_info['url']
+            else:
+                print(f"⚠️ Нет 'url' в ответе на {protocol}: {stream_info}")
+        except Exception as e:
+            print(f"❌ Ошибка при получении потока {protocol}: {e}")
     return None
 
 def play_track_by_name(name):
