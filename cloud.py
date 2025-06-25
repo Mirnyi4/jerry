@@ -55,9 +55,7 @@ def play_track_by_name(name):
         return
 
     subprocess.Popen([
-        "mpv", "--no-video",
-        "--audio-device=alsa/plughw:0,0",
-        stream_url
+    "mpv", "--no-video", stream_url
     ])
 
 def main():
