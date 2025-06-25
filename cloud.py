@@ -1,29 +1,33 @@
-from yt_dlp import YoutubeDL
+import requests
 import subprocess
 
-def play_youtube_search(query):
-    search_url = f"ytsearch:{query}"
+API_KEY = "AIzaSyApjrQYIwA2Slnn4i7ibiPhd7LH8634kvg"
 
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'skip_download': True,
-        'noplaylist': True,
+def search_youtube(query):
+    search_url = "https://www.googleapis.com/youtube/v3/search"
+    params = {
+        'part': 'snippet',
+        'q': query,
+        'key': API_KEY,
+        'maxResults': 1,
+        'type': 'video',
+        'videoCategoryId': '',  # можно указать, если нужно
     }
+    response = requests.get(search_url, params=params)
+    data = response.json()
+    items = data.get('items')
+    if not items:
+        return None
+    video_id = items[0]['id']['videoId']
+    title = items[0]['snippet']['title']
+    return video_id, title
 
-    with YoutubeDL(ydl_opts) as ydl:
-        try:
-            info = ydl.extract_info(search_url, download=False)
-            track = info['entries'][0]
-            print(f"▶ Воспроизвожу: {track['title']} — {track['uploader']}")
-            stream_url = track['url']
-
-            subprocess.Popen([
-                "mpv", "--no-video",
-                stream_url
-            ])
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
+def play_youtube_video(video_id, title):
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    print(f"▶ Воспроизвожу: {title}")
+    subprocess.Popen([
+        "mpv", "--no-video", url
+    ])
 
 def main():
     print("🎧 Введи ключевые слова для поиска трека (или 'выход'):")
@@ -33,7 +37,12 @@ def main():
             print("🚪 Выход.")
             break
         if query:
-            play_youtube_search(query)
+            result = search_youtube(query)
+            if result:
+                video_id, title = result
+                play_youtube_video(video_id, title)
+            else:
+                print("❌ Видео не найдено.")
 
 if __name__ == "__main__":
     main()
