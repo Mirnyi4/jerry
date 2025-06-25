@@ -14,23 +14,33 @@ def search_track(query):
     data = r.json()
     return data['collection'][0] if data['collection'] else None
 
-def get_stream_url(track_id):
-    return f"https://api.soundcloud.com/tracks/{track_id}/stream?client_id={CLIENT_ID}"
+def get_real_stream_url(track):
+    for transcoding in track['media']['transcodings']:
+        if 'progressive' in transcoding['format']['protocol']:
+            url = transcoding['url']
+            r = requests.get(url, params={'client_id': CLIENT_ID})
+            stream_info = r.json()
+            return stream_info['url']
+    return None
 
 def play_track_by_name(name):
     track = search_track(name)
     if not track:
-        print("❌ Не найдено.")
+        print("❌ Трек не найден.")
         return
+
     print(f"▶ Воспроизвожу: {track['title']} — {track['user']['username']}")
-    stream_url = get_stream_url(track['id'])
+    stream_url = get_real_stream_url(track)
+    if not stream_url:
+        print("❌ Не удалось получить прямую ссылку на аудио.")
+        return
+
     subprocess.Popen([
         "mpv", "--no-video",
         "--audio-device=alsa/plughw:0,0",
         stream_url
     ])
 
-# 🔁 Цикл ожидания команд из консоли
 def main():
     print("🎧 Введи название трека для воспроизведения (или 'выход'):")
     while True:
