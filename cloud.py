@@ -1,23 +1,20 @@
 from yt_dlp import YoutubeDL
 import subprocess
 
-def play_soundcloud_search(query):
-    search_url = f"scsearch:{query}"
+def play_youtube_search(query):
+    search_url = f"ytsearch:{query}"
 
     ydl_opts = {
-        'format': 'bestaudio',
+        'format': 'bestaudio/best',
         'quiet': True,
         'skip_download': True,
-        'noplaylist': True,  # только первый результат
+        'noplaylist': True,
     }
 
     with YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(search_url, download=False)
-            if 'entries' in info:
-                track = info['entries'][0]
-            else:
-                track = info
+            track = info['entries'][0]
             print(f"▶ Воспроизвожу: {track['title']} — {track['uploader']}")
             stream_url = track['url']
 
@@ -36,7 +33,7 @@ def main():
             print("🚪 Выход.")
             break
         if query:
-            play_soundcloud_search(query)
+            play_youtube_search(query)
 
 if __name__ == "__main__":
     main()
