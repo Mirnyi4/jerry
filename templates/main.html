@@ -78,7 +78,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>Настройки Джерри и Wi-Fi</h1>
+    <h1>Настройки Джерри</h1>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -105,24 +105,6 @@
 
         <button type="submit">Сохранить настройки</button>
     </form>
-
-    <div class="wifi-section">
-        <h2>Wi-Fi сети</h2>
-        <p>Текущая сеть: 
-          {% if current_connection %}
-            <span class="current-connection">{{ current_connection }}</span>
-          {% else %}
-            Нет подключения
-          {% endif %}
-        </p>
-
-        <div class="network-list">
-            {% for net in networks %}
-                <div class="network-item">{{ net }}</div>
-            {% else %}
-                <div>Нет доступных сетей</div>
-            {% endfor %}
-        </div>
 
         <form method="POST" action="{{ url_for('connect') }}" style="margin-top: 1rem;">
             <label for="ssid">SSID:</label>
