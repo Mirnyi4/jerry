@@ -72,19 +72,20 @@ def speak(text):
     voice_id = config["voice_id"]
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
 
-    # 🎙️ Стримим в aplay
+    # 🟢 Bluetooth sink — имя твоей колонки
+    bluetooth_sink = "bluez_sink.A6_D0_01_E1_EA_6D.a2dp_sink"
+
     with subprocess.Popen(
-        ["aplay", "-D", MIC_DEVICE, "-c", "1", "-f", "S16_LE", "-r", "24000"],
+        ["paplay", "--device", bluetooth_sink],
         stdin=subprocess.PIPE
-    ) as aplay_proc:
+    ) as player:
         with requests.post(url, headers=headers, json=payload, stream=True) as r:
             for chunk in r.iter_content(chunk_size=1024):
-                if chunk and aplay_proc.stdin:
-                    aplay_proc.stdin.write(chunk)
-            if aplay_proc.stdin:
-                aplay_proc.stdin.close()
-            aplay_proc.wait()
-
+                if chunk and player.stdin:
+                    player.stdin.write(chunk)
+            if player.stdin:
+                player.stdin.close()
+            player.wait()
 
 def transcribe_audio(filename=AUDIO_FILENAME):
     with open(filename, "rb") as f:
