@@ -86,6 +86,90 @@
         <form method="POST" action="{{ url_for('disconnect') }}" style="margin-top: 1rem;">
             <button type="submit" style="background:#e74c3c;">Отключиться от Wi-Fi</button>
         </form>
+
+        <button id="service-mode-btn" style="margin-top: 2rem; background:#f39c12;">Сервисный режим</button>
+
+<div id="service-mode-panel" style="display:none; margin-top:1rem;">
+    <label for="service-password">Введите пароль:</label>
+    <input type="password" id="service-password" />
+    <button id="service-password-submit">Подтвердить</button>
+</div>
+
+<div id="service-popup" style="display:none; position: fixed; top:50%; left:50%; transform: translate(-50%, -50%);
+    background:#333; padding:1.5rem; border-radius:8px; box-shadow: 0 0 10px #000; z-index:1000; color:#eee;">
+    <p>Вы вошли в сервисный режим</p>
+    <button id="reset-telegram" style="background:#e74c3c; margin-right:1rem;">Сбросить Telegram</button>
+    <button id="reset-settings" style="background:#c0392b;">Сброс настроек</button>
+    <button id="close-popup" style="margin-left:1rem; background:#7f8c8d;">Закрыть</button>
+</div>
+
+<div id="overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:900;"></div>
+
+<script>
+    const serviceBtn = document.getElementById('service-mode-btn');
+    const servicePanel = document.getElementById('service-mode-panel');
+    const servicePasswordInput = document.getElementById('service-password');
+    const servicePasswordSubmit = document.getElementById('service-password-submit');
+    const servicePopup = document.getElementById('service-popup');
+    const overlay = document.getElementById('overlay');
+    const resetTelegramBtn = document.getElementById('reset-telegram');
+    const resetSettingsBtn = document.getElementById('reset-settings');
+    const closePopupBtn = document.getElementById('close-popup');
+
+    serviceBtn.addEventListener('click', () => {
+        servicePanel.style.display = servicePanel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    servicePasswordSubmit.addEventListener('click', () => {
+        const pass = servicePasswordInput.value.trim();
+        if(pass === '325140') {
+            servicePanel.style.display = 'none';
+            servicePasswordInput.value = '';
+            showPopup();
+        } else {
+            alert('Неверный пароль!');
+        }
+    });
+
+    function showPopup() {
+        servicePopup.style.display = 'block';
+        overlay.style.display = 'block';
+    }
+
+    function hidePopup() {
+        servicePopup.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+
+    closePopupBtn.addEventListener('click', () => {
+        hidePopup();
+    });
+
+    resetTelegramBtn.addEventListener('click', () => {
+        fetch('/service/reset_telegram', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: '325140'})
+        }).then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            hidePopup();
+        }).catch(() => alert('Ошибка запроса'));
+    });
+
+    resetSettingsBtn.addEventListener('click', () => {
+        fetch('/service/reset_settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: '325140'})
+        }).then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            hidePopup();
+        }).catch(() => alert('Ошибка запроса'));
+    });
+
+</script>
     </div>
 </div>
 </body>
