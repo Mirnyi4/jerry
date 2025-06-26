@@ -47,28 +47,36 @@ def speak(text):
     config = load_config()
     print(f"\n💬 Джерри: {text}")
 
-    # Запускаем aplay для воспроизведения звука напрямую из потока
+    headers = {
+        "xi-api-key": ELEVEN_API_KEY,
+        "Accept": "audio/pcm",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.5
+        }
+    }
+
+    voice_id = config["voice_id"]
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+
+    # 🎙️ Стримим в aplay
     with subprocess.Popen(
         ["aplay", "-D", MIC_DEVICE, "-c", "1", "-f", "S16_LE", "-r", "24000"],
         stdin=subprocess.PIPE
     ) as aplay_proc:
-        # Потоковая генерация звука от ElevenLabs
-        audio_stream = elevenlabs.text_to_speech.convert(
-            voice_id=config["voice_id"],
-            model_id="eleven_multilingual_v2",
-            text=text,
-            output_format="pcm_24000",
-            stream=True
-        )
-
-        # Подключение потока к aplay
-        for chunk in audio_stream:
+        with requests.post(url, headers=headers, json=payload, stream=True) as r:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk and aplay_proc.stdin:
+                    aplay_proc.stdin.write(chunk)
             if aplay_proc.stdin:
-                aplay_proc.stdin.write(chunk)
-        
-        if aplay_proc.stdin:
-            aplay_proc.stdin.close()
-        aplay_proc.wait()
+                aplay_proc.stdin.close()
+            aplay_proc.wait()
 
 
 def transcribe_audio(filename=AUDIO_FILENAME):
