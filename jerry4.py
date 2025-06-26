@@ -43,6 +43,13 @@ def load_config():
     with open(CONFIG_PATH, "r") as f:
         return json.load(f)
 
+def record_audio(filename=AUDIO_FILENAME, duration=3):
+    subprocess.run(
+        ["arecord", "-D", MIC_DEVICE, "-f", "cd", "-t", "wav", "-d", str(duration), "-r", "16000", filename],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    
 def speak(text):
     config = load_config()
     print(f"\n💬 Джерри: {text}")
