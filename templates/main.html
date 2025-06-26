@@ -105,20 +105,7 @@
 
         <button type="submit">Сохранить настройки</button>
     </form>
-
-        <form method="POST" action="{{ url_for('connect') }}" style="margin-top: 1rem;">
-            <label for="ssid">SSID:</label>
-            <input type="text" id="ssid" name="ssid" required />
-
-            <label for="password">Пароль:</label>
-            <input type="password" id="password" name="password" required />
-
-            <button type="submit">Подключиться</button>
-        </form>
-
-        <form method="POST" action="{{ url_for('disconnect') }}" style="margin-top: 1rem;">
-            <button type="submit" style="background:#e74c3c;">Отключиться от Wi-Fi</button>
-        </form>
+    
     </div>
 
     <!-- Кнопка сервисного режима -->
