@@ -77,30 +77,6 @@ def setup_wifi():
             return redirect(url_for("setup_wifi"))
     return render_template("wifi_setup.html", current_connection=current_connection, networks=networks)
 
-@app.route("/connect", methods=["POST"])
-def connect():
-    ssid = request.form.get("ssid")
-    password = request.form.get("password")
-    if not ssid or not password:
-        flash("❌ Укажите сеть и пароль!")
-        return redirect(url_for("index"))
-    success = wifi.connect_to_network(ssid, password)
-    if success:
-        flash(f"✅ Подключено к {ssid}")
-    else:
-        flash(f"❌ Не удалось подключиться к {ssid}")
-    return redirect(url_for("index"))
-
-
-@app.route("/disconnect", methods=["POST"])
-def disconnect():
-    success = wifi.disconnect_network()
-    if success:
-        flash("✅ Wi-Fi отключен")
-    else:
-        flash("❌ Ошибка при отключении Wi-Fi")
-    return redirect(url_for("index"))
-
 
 
 @app.route("/activate", methods=["GET", "POST"])
