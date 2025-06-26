@@ -120,7 +120,7 @@ def index():
         save_config(config)
         flash("✅ Настройки сохранены!")
         return redirect(url_for("index"))
-    return render_template("index.html", config=config)
+    return render_template("main.html", config=config)
 
 
 # Новые маршруты для сервисного режима
