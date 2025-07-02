@@ -120,10 +120,6 @@ def get_stored_key():
 
 # --- Flask маршруты ---
 
-@app.before_first_request
-def before_first_request():
-    start_wifi_manager()
-
 @app.route("/")
 def start():
     if is_first_run():
