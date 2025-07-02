@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Сервисный режим — Редактирование ключей</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #222; color: #eee; margin: 0; padding: 0; }
+  .container { max-width: 700px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; }
+  h1 { text-align: center; margin-bottom: 1rem; }
+  textarea {
+    width: 100%; height: 400px; background: #111; color: #eee;
+    border: none; padding: 1rem; font-family: monospace; font-size: 1rem; border-radius: 6px;
+  }
+  label, input[type=password] {
+    display: block;
+    margin-top: 1rem;
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: none;
+    font-size: 1rem;
+  }
+  input[type=password] {
+    background: #555;
+    color: #eee;
+  }
+  button {
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    border: none;
+    background: #4caf50;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover { background: #45a049; }
+  .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+  a { color: #f39c12; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Сервисный режим — Редактирование ключей (.env)</h1>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('service_edit_env') }}">
+    <label for="password">Пароль для доступа:</label>
+    <input type="password" id="password" name="password" required />
+
+    <label for="env_text">Содержимое файла .env:</label>
+    <textarea id="env_text" name="env_text">{{ env_text }}</textarea>
+
+    <button type="submit">Сохранить</button>
+  </form>
+
+  <p style="margin-top:1rem;">
+    <a href="{{ url_for('index') }}">Вернуться в настройки</a>
+  </p>
+</div>
+</body>
+</html>
