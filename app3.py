@@ -92,10 +92,15 @@ def start_access_point():
     return False
 
 
-@app.before_first_request
+first_request_done = False
+
+@app.before_request
 def startup_checks():
-    if not check_internet():
-        start_access_point()
+    global first_request_done
+    if not first_request_done:
+        first_request_done = True
+        if not check_internet():
+            start_access_point()
 
 
 @app.route("/")
