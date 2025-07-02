@@ -225,34 +225,33 @@ def reset_settings():
         return jsonify({"message": f"Ошибка: {str(e)}"}), 500
 
 
-@app.route("/service/edit_env", methods=["GET", "POST"])
-def service_edit_env():
-    if request.method == "POST":
-        password = request.form.get("password", "")
-        if password != SERVICE_PASSWORD:
-            flash("❌ Неверный пароль!")
-            return redirect(url_for("service_edit_env"))
-
-        env_text = request.form.get("env_text", "")
-        try:
-            with open(ENV_FILE, "w", encoding="utf-8") as f:
-                f.write(env_text)
-            flash("✅ Файл .env успешно сохранён!")
-        except Exception as e:
-            flash(f"❌ Ошибка при сохранении файла .env: {str(e)}")
-        return redirect(url_for("service_edit_env"))
-
-    # GET
+@app.route("/service/get_env", methods=["POST"])
+def service_get_env():
+    data = request.get_json()
+    if not data or data.get("password") != SERVICE_PASSWORD:
+        return jsonify({"success": False, "message": "Неверный пароль"}), 403
     try:
         if os.path.exists(ENV_FILE):
             with open(ENV_FILE, "r", encoding="utf-8") as f:
-                env_text = f.read()
+                content = f.read()
+            return jsonify({"success": True, "env_content": content})
         else:
-            env_text = ""
-    except Exception:
-        env_text = ""
+            return jsonify({"success": False, "message": ".env файл не найден"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Ошибка чтения файла: {str(e)}"})
 
-    return render_template("service_edit_env.html", env_text=env_text)
+@app.route("/service/save_env", methods=["POST"])
+def service_save_env():
+    data = request.get_json()
+    if not data or data.get("password") != SERVICE_PASSWORD:
+        return jsonify({"success": False, "message": "Неверный пароль"}), 403
+    content = data.get("env_content", "")
+    try:
+        with open(ENV_FILE, "w", encoding="utf-8") as f:
+            f.write(content)
+        return jsonify({"success": True, "message": ".env файл успешно сохранён"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Ошибка записи файла: {str(e)}"})
 
 
 if __name__ == "__main__":
