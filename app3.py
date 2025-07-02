@@ -1,12 +1,15 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import json
-import os
 import subprocess
+
 from key_utils import is_key_valid
 
 CONFIG_PATH = "config.json"
 STATE_FILE = "state.json"
 SERVICE_PASSWORD = "325140"
+AP_SCRIPT = "./start_ap.sh"  # Скрипт запуска точки доступа
+ENV_FILE = ".env"  # Файл с переменными окружения для ключей API
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -46,10 +49,6 @@ def get_stored_key():
 
 
 def get_current_connection():
-    """
-    Получить название текущей Wi-Fi сети (SSID)
-    Возвращает строку или None
-    """
     try:
         result = subprocess.run(
             ["iwgetid", "-r"],
@@ -64,10 +63,6 @@ def get_current_connection():
 
 
 def list_networks():
-    """
-    Сканируем доступные сети Wi-Fi
-    Возвращаем список SSID
-    """
     try:
         result = subprocess.run(
             ["nmcli", "-t", "-f", "SSID", "device", "wifi", "list"],
@@ -76,11 +71,31 @@ def list_networks():
             timeout=5
         )
         lines = result.stdout.splitlines()
-        # Удаляем пустые и дубликаты
         networks = list(sorted(set(filter(None, lines))))
         return networks
     except Exception:
         return []
+
+
+def check_internet():
+    try:
+        res = subprocess.run(["ping", "-c", "1", "-W", "2", "8.8.8.8"], capture_output=True)
+        return res.returncode == 0
+    except Exception:
+        return False
+
+
+def start_access_point():
+    if os.path.exists(AP_SCRIPT):
+        subprocess.Popen([AP_SCRIPT])
+        return True
+    return False
+
+
+@app.before_first_request
+def startup_checks():
+    if not check_internet():
+        start_access_point()
 
 
 @app.route("/")
@@ -107,9 +122,7 @@ def setup_wifi():
             flash("❌ Укажите сеть и пароль!")
             return redirect(url_for("setup_wifi"))
 
-        # Попытка подключиться через nmcli
         try:
-            # Команда подключения
             connect_cmd = ["nmcli", "device", "wifi", "connect", ssid, "password", password]
             result = subprocess.run(connect_cmd, capture_output=True, text=True, timeout=15)
 
@@ -160,17 +173,22 @@ def index():
         return redirect(url_for("activate_page"))
 
     config = load_config()
+
     if request.method == "POST":
+        if "shutdown" in request.form:
+            subprocess.Popen(["sudo", "shutdown", "now"])
+            flash("💀 Система выключается...")
+            return redirect(url_for("index"))
+
         config["wake_word"] = request.form.get("wake_word", "").strip()
         config["style_prompt"] = request.form.get("style_prompt", "").strip()
         config["voice_id"] = request.form.get("voice_id", "").strip()
         save_config(config)
         flash("✅ Настройки сохранены!")
         return redirect(url_for("index"))
+
     return render_template("main.html", config=config)
 
-
-# Сервисные роуты для сброса
 
 @app.route("/service/reset_telegram", methods=["POST"])
 def reset_telegram():
@@ -200,6 +218,36 @@ def reset_settings():
             return jsonify({"message": "Файл state.json не найден."})
     except Exception as e:
         return jsonify({"message": f"Ошибка: {str(e)}"}), 500
+
+
+@app.route("/service/edit_env", methods=["GET", "POST"])
+def service_edit_env():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password != SERVICE_PASSWORD:
+            flash("❌ Неверный пароль!")
+            return redirect(url_for("service_edit_env"))
+
+        env_text = request.form.get("env_text", "")
+        try:
+            with open(ENV_FILE, "w", encoding="utf-8") as f:
+                f.write(env_text)
+            flash("✅ Файл .env успешно сохранён!")
+        except Exception as e:
+            flash(f"❌ Ошибка при сохранении файла .env: {str(e)}")
+        return redirect(url_for("service_edit_env"))
+
+    # GET
+    try:
+        if os.path.exists(ENV_FILE):
+            with open(ENV_FILE, "r", encoding="utf-8") as f:
+                env_text = f.read()
+        else:
+            env_text = ""
+    except Exception:
+        env_text = ""
+
+    return render_template("service_edit_env.html", env_text=env_text)
 
 
 if __name__ == "__main__":
