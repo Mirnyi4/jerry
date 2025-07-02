@@ -1,215 +1,68 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Настройки Джерри и Wi-Fi</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #222; color: #eee; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; position: relative; }
-        h1 { margin-bottom: 1rem; text-align: center; }
-        label { display: block; margin-top: 1rem; font-weight: bold; }
-        input[type=text], textarea, select, input[type=password] {
-            width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px; border: none;
-            background: #555; color: #eee; font-size: 1rem;
-        }
-        button {
-            margin-top: 1.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
-            background: #4CAF50; color: white; font-size: 1rem; cursor: pointer;
-            display: inline-block;
-        }
-        button:hover { background: #45a049; }
-        .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
-        .wifi-section { margin-top: 2rem; }
-        .network-list { margin-top: 1rem; max-height: 150px; overflow-y: auto; background: #222; padding: 0.5rem; border-radius: 4px; }
-        .network-item { padding: 0.3rem 0; border-bottom: 1px solid #444; }
-        .current-connection { font-weight: bold; color: #4CAF50; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Настройки Джерри</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #222; color: #eee; margin: 0; padding: 0; }
+  .container { max-width: 600px; margin: 2rem auto; background: #333; padding: 2rem; border-radius: 8px; position: relative; }
+  h1 { margin-bottom: 1rem; text-align: center; }
+  label { display: block; margin-top: 1rem; font-weight: bold; }
+  input[type=text], textarea, select {
+    width: 100%; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px; border: none;
+    background: #555; color: #eee; font-size: 1rem;
+  }
+  button {
+    margin-top: 1.5rem; padding: 0.75rem 1.5rem; border: none; border-radius: 4px;
+    background: #4CAF50; color: white; font-size: 1rem; cursor: pointer;
+    display: inline-block;
+  }
+  button:hover { background: #45a049; }
+  .flash { background: #444; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
 
-        /* Стили для сервисного режима */
-        #service-mode-btn {
-            margin-top: 2rem;
-            background: #f39c12;
-            padding: 0.75rem 2rem;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            color: white;
-            display: inline-block;
-        }
-        #service-mode-btn:hover {
-            background: #d87e0a;
-        }
-        #service-mode-panel {
-            margin-top: 1rem;
-            max-width: 300px;
-        }
-        #service-mode-panel label, 
-        #service-mode-panel input, 
-        #service-mode-panel button {
-            width: 100%;
-            box-sizing: border-box;
-            margin-top: 0.5rem;
-        }
-        #service-popup {
-            display:none; 
-            position: fixed; 
-            top:50%; 
-            left:50%; 
-            transform: translate(-50%, -50%);
-            background:#333; 
-            padding:1.5rem; 
-            border-radius:8px; 
-            box-shadow: 0 0 10px #000; 
-            z-index:1000; 
-            color:#eee;
-            text-align: center;
-            max-width: 320px;
-            width: 90%;
-        }
-        #service-popup button {
-            margin: 0.5rem 0.5rem 0 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            color: white;
-            min-width: 120px;
-        }
-        #reset-telegram { background:#e74c3c; }
-        #reset-settings { background:#c0392b; }
-        #close-popup { background:#7f8c8d; color: #000; }
-
-        #overlay {
-            display:none; 
-            position:fixed; 
-            top:0; left:0; 
-            width:100%; 
-            height:100%; 
-            background:rgba(0,0,0,0.6); 
-            z-index:900;
-        }
-    </style>
+  /* Кнопка выключения красная и справа */
+  #shutdown-btn {
+    background: #e74c3c;
+    float: right;
+    margin-left: 10px;
+  }
+</style>
 </head>
 <body>
 <div class="container">
-    <h1>Настройки Джерри</h1>
+  <h1>Настройки Джерри</h1>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for msg in messages %}
-          <div class="flash">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-    <form method="POST" action="{{ url_for('index') }}">
-        <label for="wake_word">Ключевое слово для активации:</label>
-        <input type="text" id="wake_word" name="wake_word" value="{{ config.wake_word }}" required />
+  <form method="POST" action="{{ url_for('index') }}">
+    <label for="wake_word">Ключевое слово для активации:</label>
+    <input type="text" id="wake_word" name="wake_word" value="{{ config.wake_word }}" required />
 
-        <label for="style_prompt">Стиль общения (промт):</label>
-        <textarea id="style_prompt" name="style_prompt" rows="4" required>{{ config.style_prompt }}</textarea>
+    <label for="style_prompt">Стиль общения (промт):</label>
+    <textarea id="style_prompt" name="style_prompt" rows="4" required>{{ config.style_prompt }}</textarea>
 
-        <label for="voice_id">Голос:</label>
-        <select id="voice_id" name="voice_id" required>
-            <option value="Obuyk6KKzg9olSLPaCbl" {% if config.voice_id == 'Obuyk6KKzg9olSLPaCbl' %}selected{% endif %}>Аркадий</option>
-            <option value="gedzfqL7OGdPbwm0ynTP" {% if config.voice_id == 'gedzfqL7OGdPbwm0ynTP' %}selected{% endif %}>Надя</option>
-            <option value="pvY1pikBdoI4SB62vEVo" {% if config.voice_id == 'pvY1pikBdoI4SB62vEVo' %}selected{% endif %}>Андрей</option>
-            <option value="ymDCYd8puC7gYjxIamPt" {% if config.voice_id == 'ymDCYd8puC7gYjxIamPt' %}selected{% endif %}>Тетя Зина</option>
-        </select>
+    <label for="voice_id">Голос:</label>
+    <select id="voice_id" name="voice_id" required>
+      <option value="Obuyk6KKzg9olSLPaCbl" {% if config.voice_id == 'Obuyk6KKzg9olSLPaCbl' %}selected{% endif %}>Аркадий</option>
+      <option value="gedzfqL7OGdPbwm0ynTP" {% if config.voice_id == 'gedzfqL7OGdPbwm0ynTP' %}selected{% endif %}>Надя</option>
+      <option value="pvY1pikBdoI4SB62vEVo" {% if config.voice_id == 'pvY1pikBdoI4SB62vEVo' %}selected{% endif %}>Андрей</option>
+      <option value="ymDCYd8puC7gYjxIamPt" {% if config.voice_id == 'ymDCYd8puC7gYjxIamPt' %}selected{% endif %}>Тетя Зина</option>
+    </select>
 
-        <button type="submit">Сохранить настройки</button>
-    </form>
+    <button type="submit">Сохранить настройки</button>
+    <button type="submit" name="shutdown" id="shutdown-btn" onclick="return confirm('Вы уверены, что хотите выключить систему?')">Выключить систему</button>
+  </form>
 
-    <!-- Кнопка сервисного режима -->
-    <button id="service-mode-btn">Сервисный режим</button>
-
-    <div id="service-mode-panel" style="display:none;">
-        <label for="service-password">Введите пароль:</label>
-        <input type="password" id="service-password" autocomplete="off" />
-        <button id="service-password-submit">Подтвердить</button>
-    </div>
-
+  <p style="margin-top:2rem;">
+    <a href="{{ url_for('service_edit_env') }}" style="color:#f39c12;">Перейти в сервисный режим (редактирование ключей)</a>
+  </p>
 </div>
-
-<div id="service-popup">
-    <p>Вы вошли в сервисный режим</p>
-    <button id="reset-telegram">Сбросить Telegram</button>
-    <button id="reset-settings">Сброс настроек</button>
-    <button id="close-popup">Закрыть</button>
-</div>
-
-<div id="overlay"></div>
-
-<script>
-    const serviceBtn = document.getElementById('service-mode-btn');
-    const servicePanel = document.getElementById('service-mode-panel');
-    const servicePasswordInput = document.getElementById('service-password');
-    const servicePasswordSubmit = document.getElementById('service-password-submit');
-    const servicePopup = document.getElementById('service-popup');
-    const overlay = document.getElementById('overlay');
-    const resetTelegramBtn = document.getElementById('reset-telegram');
-    const resetSettingsBtn = document.getElementById('reset-settings');
-    const closePopupBtn = document.getElementById('close-popup');
-
-    serviceBtn.addEventListener('click', () => {
-        // переключаем видимость панели ввода пароля
-        servicePanel.style.display = (servicePanel.style.display === 'none' || servicePanel.style.display === '') ? 'block' : 'none';
-        // очищаем поле и прячем попап, если открыты
-        servicePasswordInput.value = '';
-        hidePopup();
-    });
-
-    servicePasswordSubmit.addEventListener('click', (e) => {
-        e.preventDefault();
-        const pass = servicePasswordInput.value.trim();
-        if(pass === '325140') {
-            servicePanel.style.display = 'none';
-            servicePasswordInput.value = '';
-            showPopup();
-        } else {
-            alert('Неверный пароль!');
-        }
-    });
-
-    function showPopup() {
-        servicePopup.style.display = 'block';
-        overlay.style.display = 'block';
-    }
-
-    function hidePopup() {
-        servicePopup.style.display = 'none';
-        overlay.style.display = 'none';
-    }
-
-    closePopupBtn.addEventListener('click', () => {
-        hidePopup();
-    });
-
-    resetTelegramBtn.addEventListener('click', () => {
-        fetch('/service/reset_telegram', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({password: '325140'})
-        }).then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            hidePopup();
-        }).catch(() => alert('Ошибка запроса'));
-    });
-
-    resetSettingsBtn.addEventListener('click', () => {
-        fetch('/service/reset_settings', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({password: '325140'})
-        }).then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            hidePopup();
-        }).catch(() => alert('Ошибка запроса'));
-    });
-</script>
 </body>
 </html>
