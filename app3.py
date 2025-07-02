@@ -9,7 +9,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 CONFIG_PATH = "config.json"
 STATE_FILE = "state.json"
 SERVICE_PASSWORD = "325140"
-
 AP_INTERFACE = "wlan0"
 HOSTAPD_SERVICE = "hostapd"
 WPA_SUPPLICANT_SERVICE = "wpa_supplicant"
