@@ -5,6 +5,7 @@ import json
 import requests
 import subprocess
 import threading
+import queue
 from io import BytesIO
 from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
@@ -25,8 +26,6 @@ AUDIO_FILENAME = "input.wav"
 CONFIG_PATH = "config.json"
 STATE = "sleep"
 history = []
-latest_sender = None
-latest_chat = None
 
 # Инициализация клиентов
 client = TelegramClient('session_jerry', API_ID, API_HASH)
@@ -51,9 +50,14 @@ def record_audio(filename=AUDIO_FILENAME, duration=3):
         stderr=subprocess.DEVNULL
     )
 
-# ====== ОЗВУЧКА (потоково в отдельном потоке) ======
-def speak(text):
-    def play_audio():
+# ====== ОЧЕРЕДЬ ОЗВУЧКИ ======
+speak_queue = queue.Queue()
+
+def speak_worker():
+    while True:
+        text = speak_queue.get()
+        if text is None:
+            break
         config = load_config()
         voice_id = config["voice_id"]
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
@@ -69,17 +73,24 @@ def speak(text):
         }
 
         bluetooth_sink = "bluez_sink.A6_D0_01_E1_EA_6D.a2dp_sink"
-        with subprocess.Popen(["paplay", "--device", bluetooth_sink], stdin=subprocess.PIPE) as player:
-            with requests.post(url, headers=headers, json=payload, stream=True) as r:
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk and player.stdin:
-                        player.stdin.write(chunk)
+        try:
+            with subprocess.Popen(["paplay", "--device", bluetooth_sink], stdin=subprocess.PIPE) as player:
+                with requests.post(url, headers=headers, json=payload, stream=True) as r:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk and player.stdin:
+                            player.stdin.write(chunk)
                 if player.stdin:
                     player.stdin.close()
                 player.wait()
+        except Exception as e:
+            print("Ошибка воспроизведения:", e)
 
+# Запускаем поток один раз
+threading.Thread(target=speak_worker, daemon=True).start()
+
+def speak(text):
     print(f"\n💬 Джерри: {text}")
-    threading.Thread(target=play_audio, daemon=True).start()
+    speak_queue.put(text)
 
 # ====== РАСПОЗНАВАНИЕ АУДИО ======
 def transcribe_audio(filename=AUDIO_FILENAME):
@@ -93,9 +104,9 @@ def transcribe_audio(filename=AUDIO_FILENAME):
         )
     return transcription.text or ""
 
-# ====== GROC STREAM ======
-import sseclient
+# ====== STREAM GROC ======
 def ask_grok_stream(prompt, speak_func):
+    import sseclient
     config = load_config()
     system_prompt = {"role": "system", "content": config["style_prompt"]}
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {XAI_API_KEY}"}
@@ -135,15 +146,13 @@ def ask_grok_stream(prompt, speak_func):
 
 # ====== TELEGRAM ЛОГИКА ======
 latest_chat = None
-latest_sender = None
 fuzzy_matches = {}
 awaiting_message = False
 unread_users = {}
 
 async def telegram_logic(command):
-    global latest_chat, latest_sender, fuzzy_matches, awaiting_message, unread_users
+    global latest_chat, fuzzy_matches, awaiting_message, unread_users
     command = command.lower().strip()
-    # 🔔 Проверка непрочитанных
     if "непрочитан" in command or "кто мне писал" in command:
         unread_users = {}
         dialogs = await client.get_dialogs(limit=30)
@@ -171,7 +180,6 @@ async def telegram_logic(command):
             speak("Нет новых сообщений от людей.")
         return True
 
-    # Прочитать сообщение
     if unread_users:
         for name in unread_users:
             if name in command:
@@ -181,7 +189,6 @@ async def telegram_logic(command):
                 unread_users = {}
                 return True
 
-    # Ответ последнему отправителю
     if command.startswith("ответь ему") and latest_chat:
         text = command.replace("ответь ему", "").strip()
         speak(f"Ок, пишу: {text}")
@@ -189,7 +196,6 @@ async def telegram_logic(command):
         awaiting_message = False
         return True
 
-    # Выбор контакта
     if fuzzy_matches:
         for word, number in {"перв":1,"втор":2,"трет":3,"1":1,"2":2,"3":3}.items():
             if word in command and number in fuzzy_matches:
@@ -200,7 +206,6 @@ async def telegram_logic(command):
                 speak(f"Хорошо. Что пишем {user.first_name}?")
                 return True
 
-    # Найти контакт
     if "найди" in command and "чат" not in command:
         name = command.replace("найди", "").strip()
         user = await find_contact_by_name(name)
@@ -215,7 +220,6 @@ async def telegram_logic(command):
             speak("Не нашёл такого контакта.")
         return True
 
-    # Написать вручную
     if command.startswith("напиши "):
         text_to_send = command.replace("напиши ", "").strip()
         if latest_chat:
@@ -226,7 +230,6 @@ async def telegram_logic(command):
             speak("Не выбран получатель.")
         return True
 
-    # Просто сообщение
     if awaiting_message and latest_chat:
         speak(f"Пишу: {command}")
         await client.send_message(latest_chat, command)
@@ -268,7 +271,7 @@ async def main_loop():
     await client.start(phone=PHONE)
     config = load_config()
     WAKE_WORD = config["wake_word"].lower()
-    speak("Обновление 5.0, BETMIX помощник слушает, скажи Привет")
+    speak("Система активирована. Джерри слушает.")
 
     while True:
         record_audio(duration=3)
@@ -293,7 +296,7 @@ async def main_loop():
                 print(e)
                 speak("Произошла ошибка.")
 
-            # Слушаем дальше 15 секунд для продолжения
+            # слушаем дальше 15 секунд
             timeout = time.time() + 15
             while time.time() < timeout:
                 record_audio(duration=3)
